@@ -1,0 +1,37 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  color: #ffd700;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+/* Gold, Black, Green Theme */
+.gold-text {
+  color: #ffd700;
+}
+
+.black-bg {
+  background: #000000;
+}
+
+.green-bg {
+  background: #00ff00;
+}
+
+button {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}

@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: bingo-postgres
+    environment:
+      POSTGRES_DB: bingo_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bingo-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: bingo-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - bingo-network
+
+  backend:
+    build: ./backend
+    container_name: bingo-backend
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - bingo-network
+
+  frontend:
+    build: ./frontend
+    container_name: bingo-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - bingo-network
+
+  admin-panel:
+    build: ./admin-panel
+    container_name: bingo-admin
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    networks:
+      - bingo-network
+
+volumes:
+  postgres_data:
+
+networks:
+  bingo-network:
+    driver: bridge

@@ -1,0 +1,136 @@
+.cartela-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+}
+
+.cartela-modal {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  border: 2px solid #ffd700;
+  border-radius: 20px;
+  padding: 20px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+}
+
+.cartela-modal h2 {
+  color: #ffd700;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.cartela-preview {
+  margin: 20px 0;
+}
+
+.bingo-card-preview {
+  width: 100%;
+  border-collapse: collapse;
+  background: #000;
+}
+
+.bingo-card-preview th,
+.bingo-card-preview td {
+  border: 1px solid #ffd700;
+  padding: 12px;
+  text-align: center;
+  width: 60px;
+  height: 60px;
+}
+
+.bingo-card-preview th {
+  background: #ffd700;
+  color: #000;
+  font-weight: bold;
+}
+
+.bingo-card-preview td {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.bingo-card-preview td.free-space {
+  background: #00ff00;
+  color: #000;
+  font-weight: bold;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.modal-buttons button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirm-btn {
+  background: #00ff00;
+  color: #000;
+}
+
+.confirm-btn:hover {
+  background: #00cc00;
+  transform: scale(1.05);
+}
+
+.cancel-btn {
+  background: #ffd700;
+  color: #000;
+}
+
+.cancel-btn:hover {
+  background: #ffcc00;
+  transform: scale(1.05);
+}
+
+.close-btn {
+  background: #ff4444;
+  color: #fff;
+}
+
+.close-btn:hover {
+  background: #cc0000;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .bingo-card-preview th,
+  .bingo-card-preview td {
+    padding: 6px;
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+  
+  .modal-buttons button {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}
