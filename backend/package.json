@@ -7,7 +7,9 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "migrate": "node database/migrate.js",
-    "seed-cartelas": "node database/seedCartelas.js"
+    "seed-cartelas": "node database/seedCartelas.js",
+    "build": "npm install",
+    "postinstall": "npm run migrate && npm run seed-cartelas"
   },
   "dependencies": {
     "axios": "^1.14.0",
