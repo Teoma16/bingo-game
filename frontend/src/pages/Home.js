@@ -37,7 +37,7 @@ const [depositStatus, setDepositStatus] = useState('');
   // Fetch cartela data
   const fetchCartela = async (luckyNumber) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/cartela/${luckyNumber}`);
+      const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/cartela/${luckyNumber}`);
       return response.data;
     } catch (error) {
       console.error('Failed to fetch cartela:', error);
@@ -48,7 +48,7 @@ const [depositStatus, setDepositStatus] = useState('');
 // Fetch transactions and game history
 const fetchTransactions = async () => {
   try {
-    const response = await axios.get(`http://localhost:5000/api/user/transactions/${user.id}`, {
+    const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/transactions/${user.id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     setTransactions(response.data);
@@ -59,7 +59,7 @@ const fetchTransactions = async () => {
 
 const fetchGameHistory = async () => {
   try {
-    const response = await axios.get(`http://localhost:5000/api/user/game-history/${user.id}`, {
+    const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/game-history/${user.id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     setGameHistory(response.data);
@@ -82,7 +82,7 @@ const handleDeposit = async () => {
   
   setDepositStatus('processing');
   try {
-    const response = await axios.post('http://localhost:5000/api/user/deposit-request', {
+    const response = await axios.post('https://bingo-game-production-dd0b.up.railway.app/api/user/deposit-request', {
       userId: user.id,
       amount: depositAmount,
       smsText: depositSms
@@ -96,7 +96,7 @@ const handleDeposit = async () => {
       setDepositAmount(null);
       setDepositSms('');
       // Refresh balance
-      const balanceResponse = await axios.get(`http://localhost:5000/api/user/balance/${user.id}`, {
+      const balanceResponse = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/balance/${user.id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setBalance(balanceResponse.data.balance);
@@ -128,7 +128,7 @@ const handleWithdraw = async () => {
   }
   
   try {
-    const response = await axios.post('http://localhost:5000/api/user/withdraw', {
+    const response = await axios.post('https://bingo-game-production-dd0b.up.railway.app/api/user/withdraw', {
       userId: user.id,
       amount: parseFloat(withdrawAmount),
       phoneNumber: withdrawPhone
@@ -236,7 +236,7 @@ const handleWithdraw = async () => {
     fetchAdvertisement();
     
     // Initialize WebSocket
-    const newSocket = io('http://localhost:5000' || 'https://bingo-game-production-dd0b.up.railway.app');
+    const newSocket = io('https://bingo-game-production-dd0b.up.railway.app');
     setSocket(newSocket);
     
     // Generate lucky numbers 1-100
@@ -328,7 +328,7 @@ const handleWithdraw = async () => {
 
   const fetchAdvertisement = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/admin/advertisement');
+      const response = await axios.get('https://bingo-game-production-dd0b.up.railway.app/api/admin/advertisement');
       setAdData(response.data);
     } catch (error) {
       console.error('Failed to fetch ad:', error);
