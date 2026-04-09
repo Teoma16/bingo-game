@@ -143,6 +143,7 @@ newSocket.on('game-ended', (data) => {
     const winnerData = data.winners[0];
     setWinner({
       userId: winnerData.userId,
+	  username: winnerData.username || `Player ${winnerData.userId}`,
       amount: winnerData.amount,
       totalAmount: winnerData.totalAmount || winnerData.amount,
       bonus: winnerData.bonus || 0
@@ -427,7 +428,7 @@ useEffect(() => {
           ) : (
             <>
               <p className="winner-congrats">🎉 BINGO! 🎉</p>
-              <p className="winner-message">Player {winner.userId} won the game!</p>
+              <p className="winner-message">Player {winner.username} won the game!</p>
               <div className="winner-amount">
                 <span className="amount-label">Prize Amount</span>
                 <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>

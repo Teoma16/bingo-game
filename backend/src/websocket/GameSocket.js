@@ -629,7 +629,7 @@ async startNewGame() {
   }
 }
 
-  async processWin(winnerId) {
+ async processWin(winnerId) {
   console.log(`\n========== PROCESSING WINNER ==========`);
   console.log(`Winner ID: ${winnerId}`);
   
@@ -646,8 +646,11 @@ async startNewGame() {
   
   console.log(`Prize pool: ${prizePoolNum}, Winner gets: ${roundedPrize}`);
   
-  // Credit the winner
+  // Get winner user with username
   const user = await User.findByPk(winnerId);
+  const winnerName = user?.username || user?.phone_number || `Player ${winnerId}`;
+  
+  // Credit the winner
   if (user) {
     const oldBalance = parseFloat(user.wallet_balance) || 0;
     const newBalance = oldBalance + roundedPrize;
@@ -680,11 +683,15 @@ async startNewGame() {
   this.currentGame.end_time = new Date();
   await this.currentGame.save();
   
-  // Announce winner to ALL players
+  // Announce winner with username
   this.io.emit('game-ended', {
-    winners: [{ userId: winnerId, amount: roundedPrize }],
+    winners: [{ 
+      userId: winnerId, 
+      username: winnerName,
+      amount: roundedPrize 
+    }],
     prizeAmount: roundedPrize,
-    message: `🎉 BINGO! ${user?.username || 'Player'} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
+    message: `🎉 BINGO! ${winnerName} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
   });
   
   // Start next game after 5 seconds
