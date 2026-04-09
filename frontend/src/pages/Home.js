@@ -260,7 +260,7 @@ const handleWithdraw = async () => {
     newSocket.on('game-state', (data) => {
       setGameStatus(data.status);
       // Calculate winner amount (81% of prize pool)
-      const winnerAmt = (data.prizePool || 0) * 0.81);
+      const winnerAmt = (data.prizePool || 0) * 0.81;
       setWinnerAmount(winnerAmt);
 	  console.log('Game state - Prize pool:', data.prizePool, 'Winner amount:', winnerAmt);
     });
