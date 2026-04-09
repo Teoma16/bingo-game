@@ -18,15 +18,20 @@ const adminAuthRoutes = require('./routes/adminAuthRoutes');
 const app = express();
 const server = http.createServer(app);
 
-// CORS configuration
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
-}));
-
-app.options('*', cors());
+// CORS configuration - Allow all origins (for testing with Railway frontend)
+app.use((req, res, next) => {
+  // Allow any origin
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -38,20 +43,6 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/cartela', cartelaRoutes);
 
-// Update the CORS configuration
-app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:3001', 
-    'http://127.0.0.1:3000', 
-    'http://127.0.0.1:3001',
-    'https://earnest-amazement-production.up.railway.app',  // Add your frontend URL
-    'https://bingo-game-production-dd0b.up.railway.app'      // Also allow backend itself
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
-}));
 // Admin auth routes - make sure this is correct
 app.use('/api/admin/auth', adminAuthRoutes.router || adminAuthRoutes);
 
@@ -75,7 +66,6 @@ sequelize.authenticate()
   .then(() => {
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📍 CORS enabled for ports 3000 and 3001`);
     });
   })
   .catch(err => {
