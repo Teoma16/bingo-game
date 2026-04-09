@@ -1,12 +1,13 @@
 const { Telegraf, Markup } = require('telegraf');
-const { User, Transaction, GamePlayer, Game } = require('../src/models');
+const { User, Transaction, GamePlayer, Game, WithdrawRequest } = require('../src/models');
+const { Op } = require('sequelize');
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
-// Game URL - keep this in code, players never see it
+// Game URL
 const GAME_URL = 'https://earnest-amazement-production.up.railway.app';
 
-// Start command - Registration
+// ============ START COMMAND ============
 bot.start(async (ctx) => {
   const telegramId = ctx.from.id;
   const username = ctx.from.username || ctx.from.first_name;
@@ -16,10 +17,11 @@ bot.start(async (ctx) => {
   if (existingUser) {
     return ctx.reply(
       `🎰 *WELCOME BACK!* 🎰\n\n` +
-      `Player: ${username}\n` +
-      `💰 Balance: ${existingUser.wallet_balance} Birr\n` +
-      `🏆 Games Won: ${existingUser.total_won}\n\n` +
-      `👇 *Tap PLAY to start playing!* 👇`,
+      `👤 *Player:* ${username}\n` +
+      `💰 *Balance:* ${existingUser.wallet_balance} Birr\n` +
+      `🏆 *Games Won:* ${existingUser.total_won}\n` +
+      `🎮 *Games Played:* ${existingUser.total_played}\n\n` +
+      `👇 *Choose an option below:* 👇`,
       {
         parse_mode: 'Markdown',
         ...Markup.inlineKeyboard([
@@ -45,7 +47,7 @@ bot.start(async (ctx) => {
   );
 });
 
-// Handle contact sharing
+// ============ REGISTRATION ============
 bot.on('contact', async (ctx) => {
   const telegramId = ctx.from.id;
   const username = ctx.from.username || ctx.from.first_name;
@@ -104,31 +106,198 @@ bot.on('contact', async (ctx) => {
     
   } catch (error) {
     console.error('Registration error:', error);
-    ctx.reply('Registration failed. Please try again.');
+    ctx.reply('❌ Registration failed. Please try again later.');
   }
 });
 
-// Balance callback
-bot.action('balance', async (ctx) => {
+// ============ BALANCE COMMAND ============
+bot.command('balance', async (ctx) => {
   const user = await User.findOne({ where: { telegram_id: ctx.from.id } });
-  if (user) {
-    await ctx.reply(
-      `💰 *YOUR WALLET* 💰\n\n` +
-      `Available: *${user.wallet_balance} Birr*\n` +
-      `Games Played: ${user.total_played}\n` +
-      `Games Won: ${user.total_won}\n` +
-      `Bonus Received: ${user.total_bonus} Birr`,
+  if (!user) {
+    return ctx.reply('❌ Please register first using /start');
+  }
+  
+  // Get recent transactions
+  const recentTxs = await Transaction.findAll({
+    where: { user_id: user.id },
+    order: [['created_at', 'DESC']],
+    limit: 5
+  });
+  
+  let recentActivity = '';
+  if (recentTxs.length > 0) {
+    recentActivity = '\n\n*Recent Activity:*\n';
+    recentTxs.forEach(tx => {
+      const date = new Date(tx.created_at).toLocaleDateString();
+      const amount = tx.amount >= 0 ? `+${tx.amount}` : `${tx.amount}`;
+      recentActivity += `${date}: ${amount} Birr (${tx.type})\n`;
+    });
+  }
+  
+  await ctx.reply(
+    `💰 *YOUR WALLET* 💰\n\n` +
+    `Available Balance: *${user.wallet_balance} Birr*\n` +
+    `🎮 Games Played: ${user.total_played}\n` +
+    `🏆 Games Won: ${user.total_won}\n` +
+    `🎁 Bonus Received: ${user.total_bonus} Birr${recentActivity}`,
+    { parse_mode: 'Markdown' }
+  );
+});
+
+// ============ HISTORY COMMAND ============
+bot.command('history', async (ctx) => {
+  const user = await User.findOne({ where: { telegram_id: ctx.from.id } });
+  if (!user) {
+    return ctx.reply('❌ Please register first using /start');
+  }
+  
+  // Get game history
+  const games = await GamePlayer.findAll({
+    where: { user_id: user.id },
+    include: [{ model: Game }],
+    order: [['joined_at', 'DESC']],
+    limit: 10
+  });
+  
+  // Get transaction history
+  const transactions = await Transaction.findAll({
+    where: { user_id: user.id },
+    order: [['created_at', 'DESC']],
+    limit: 5
+  });
+  
+  let message = `📜 *GAME HISTORY* 📜\n\n`;
+  
+  if (games.length === 0) {
+    message += `No games played yet.\n\n`;
+  } else {
+    message += `*🎮 Recent Games:*\n`;
+    games.forEach((game, index) => {
+      const date = new Date(game.joined_at).toLocaleDateString();
+      const status = game.is_winner ? `✅ WON ${game.prize_amount} Birr` : '❌ Lost';
+      message += `${index + 1}. ${date} - Game #${game.Game?.game_number || 'N/A'} - ${status}\n`;
+    });
+  }
+  
+  if (transactions.length > 0) {
+    message += `\n*💸 Recent Transactions:*\n`;
+    transactions.forEach(tx => {
+      const date = new Date(tx.created_at).toLocaleDateString();
+      const amount = tx.amount >= 0 ? `+${tx.amount}` : `${tx.amount}`;
+      message += `${date}: ${amount} Birr (${tx.type})\n`;
+    });
+  }
+  
+  await ctx.reply(message, { parse_mode: 'Markdown' });
+});
+
+// ============ WITHDRAW COMMAND ============
+bot.command('withdraw', async (ctx) => {
+  const user = await User.findOne({ where: { telegram_id: ctx.from.id } });
+  if (!user) {
+    return ctx.reply('❌ Please register first using /start');
+  }
+  
+  const args = ctx.message.text.split(' ');
+  
+  if (args.length === 1) {
+    // Show withdraw info
+    return ctx.reply(
+      `💸 *WITHDRAWAL INFORMATION* 💸\n\n` +
+      `💰 Your balance: *${user.wallet_balance} Birr*\n` +
+      `📉 Minimum withdrawal: *100 Birr*\n\n` +
+      `*How to withdraw:*\n` +
+      `/withdraw [amount] [phone_number]\n\n` +
+      `*Example:*\n` +
+      `/withdraw 200 251911111111\n\n` +
+      `⚠️ Withdrawals are processed within 24 hours.`,
       { parse_mode: 'Markdown' }
     );
   }
+  
+  if (args.length < 3) {
+    return ctx.reply(
+      `❌ *Invalid format*\n\n` +
+      `Usage: /withdraw [amount] [phone_number]\n` +
+      `Example: /withdraw 200 251911111111`,
+      { parse_mode: 'Markdown' }
+    );
+  }
+  
+  const amount = parseFloat(args[1]);
+  const phoneNumber = args[2];
+  
+  // Validation
+  if (isNaN(amount)) {
+    return ctx.reply('❌ Please enter a valid amount');
+  }
+  
+  if (amount < 100) {
+    return ctx.reply('❌ Minimum withdrawal amount is 100 Birr');
+  }
+  
+  if (amount > user.wallet_balance) {
+    return ctx.reply(`❌ Insufficient balance.\nYour balance: ${user.wallet_balance} Birr`);
+  }
+  
+  if (!phoneNumber.match(/^[0-9]{12}$/)) {
+    return ctx.reply('❌ Please enter a valid phone number (12 digits, e.g., 251911111111)');
+  }
+  
+  try {
+    // Create withdrawal request
+    const withdrawal = await WithdrawRequest.create({
+      user_id: user.id,
+      amount: amount,
+      phone_number: phoneNumber,
+      status: 'pending'
+    });
+    
+    await ctx.reply(
+      `✅ *WITHDRAWAL REQUEST SUBMITTED!* ✅\n\n` +
+      `Amount: *${amount} Birr*\n` +
+      `Phone: ${phoneNumber}\n` +
+      `Request ID: #${withdrawal.id}\n\n` +
+      `⏳ Status: *Pending Approval*\n\n` +
+      `Admin will process your request within 24 hours.\n` +
+      `The amount will be sent to your Telebirr account.`,
+      { parse_mode: 'Markdown' }
+    );
+    
+    // Optional: Notify admin
+    // await notifyAdmin(`New withdrawal request: ${amount} Birr from ${user.username}`);
+    
+  } catch (error) {
+    console.error('Withdraw error:', error);
+    ctx.reply('❌ Failed to submit withdrawal request. Please try again later.');
+  }
+});
+
+// ============ BALANCE BUTTON ============
+bot.action('balance', async (ctx) => {
+  const user = await User.findOne({ where: { telegram_id: ctx.from.id } });
+  if (!user) {
+    await ctx.reply('❌ Please register first using /start');
+    return await ctx.answerCbQuery();
+  }
+  
+  await ctx.reply(
+    `💰 *YOUR WALLET* 💰\n\n` +
+    `Available: *${user.wallet_balance} Birr*\n` +
+    `Games Played: ${user.total_played}\n` +
+    `Games Won: ${user.total_won}\n` +
+    `Bonus Received: ${user.total_bonus} Birr`,
+    { parse_mode: 'Markdown' }
+  );
   await ctx.answerCbQuery();
 });
 
-// History callback
+// ============ HISTORY BUTTON ============
 bot.action('history', async (ctx) => {
   const user = await User.findOne({ where: { telegram_id: ctx.from.id } });
   if (!user) {
-    return ctx.reply('Please register first using /start');
+    await ctx.reply('❌ Please register first using /start');
+    return await ctx.answerCbQuery();
   }
   
   const games = await GamePlayer.findAll({
@@ -143,85 +312,44 @@ bot.action('history', async (ctx) => {
   } else {
     let message = `📜 *GAME HISTORY* 📜\n\n`;
     games.forEach((game, index) => {
+      const date = new Date(game.joined_at).toLocaleDateString();
       const status = game.is_winner ? `✅ WON ${game.prize_amount} Birr` : '❌ Lost';
-      message += `${index + 1}. Game #${game.Game?.game_number || 'N/A'} - ${status}\n`;
+      message += `${index + 1}. ${date} - Game #${game.Game?.game_number || 'N/A'} - ${status}\n`;
     });
     await ctx.reply(message, { parse_mode: 'Markdown' });
   }
   await ctx.answerCbQuery();
 });
 
-// Withdraw callback
+// ============ WITHDRAW BUTTON ============
 bot.action('withdraw', async (ctx) => {
   const user = await User.findOne({ where: { telegram_id: ctx.from.id } });
   await ctx.reply(
     `💸 *WITHDRAWAL* 💸\n\n` +
-    `Your balance: *${user?.wallet_balance || 0} Birr*\n` +
-    `Minimum: *100 Birr*\n\n` +
-    `Send: /withdraw [amount] [phone]\n\n` +
-    `Example: /withdraw 200 251911111111`,
+    `💰 Your balance: *${user?.wallet_balance || 0} Birr*\n` +
+    `📉 Minimum: *100 Birr*\n\n` +
+    `*How to withdraw:*\n` +
+    `/withdraw [amount] [phone_number]\n\n` +
+    `*Example:*\n` +
+    `/withdraw 200 251911111111`,
     { parse_mode: 'Markdown' }
   );
   await ctx.answerCbQuery();
 });
 
-// Withdraw command
-bot.command('withdraw', async (ctx) => {
-  const user = await User.findOne({ where: { telegram_id: ctx.from.id } });
-  if (!user) return ctx.reply('Please register first with /start');
-  
-  const args = ctx.message.text.split(' ');
-  if (args.length < 3) {
-    return ctx.reply(
-      `Usage: /withdraw [amount] [phone_number]\n\n` +
-      `Example: /withdraw 200 251911111111`
-    );
-  }
-  
-  const amount = parseFloat(args[1]);
-  const phoneNumber = args[2];
-  
-  if (isNaN(amount) || amount < 100) return ctx.reply('Minimum withdrawal is 100 Birr');
-  if (amount > user.wallet_balance) return ctx.reply(`Insufficient balance. Your balance: ${user.wallet_balance} Birr`);
-  
-  const { WithdrawRequest } = require('../src/models');
-  await WithdrawRequest.create({
-    user_id: user.id,
-    amount: amount,
-    phone_number: phoneNumber,
-    status: 'pending'
-  });
-  
-  await ctx.reply(`✅ Withdrawal request of ${amount} Birr submitted!\n\nAdmin will process within 24 hours.`);
-});
-
-// Help command
-bot.command('help', async (ctx) => {
-  await ctx.reply(
-    `🎮 *BINGO GAME HELP* 🎮\n\n` +
-    `/start - Open game menu\n` +
-    `/balance - Check your balance\n` +
-    `/history - View game history\n` +
-    `/withdraw [amount] [phone] - Request withdrawal\n` +
-    `/help - Show this menu\n\n` +
-    `👇 *Tap PLAY to start playing!* 👇`,
-    {
-      parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard([
-        [Markup.button.webApp('🎮 PLAY BINGO', GAME_URL)]
-      ])
-    }
-  );
-});
-
-// Send winner notification
-async function sendWinnerNotification(telegramId, amount, gameNumber) {
+// ============ WINNER NOTIFICATION ============
+async function sendWinnerNotification(telegramId, amount, gameNumber, prizeAmount) {
   try {
+    const user = await User.findOne({ where: { telegram_id: telegramId } });
+    const username = user?.username || 'Player';
+    
     await bot.telegram.sendMessage(
       telegramId,
       `🎉🎉🎉 *BINGO! YOU WON!* 🎉🎉🎉\n\n` +
-      `🏆 You won *${amount} Birr* in Game #${gameNumber}!\n` +
-      `💰 Amount credited to your wallet.\n\n` +
+      `🏆 Congratulations *${username}!*\n` +
+      `💰 You won *${prizeAmount} Birr* in Game #${gameNumber}!\n` +
+      `💵 Amount credited to your wallet.\n\n` +
+      `📊 New Balance: *${user?.wallet_balance || 0} Birr*\n\n` +
       `👇 *Tap PLAY to play again!* 👇`,
       {
         parse_mode: 'Markdown',
@@ -234,5 +362,46 @@ async function sendWinnerNotification(telegramId, amount, gameNumber) {
     console.error('Failed to send winner notification:', error);
   }
 }
+
+// ============ HELP COMMAND ============
+bot.command('help', async (ctx) => {
+  await ctx.reply(
+    `🎮 *BINGO GAME HELP* 🎮\n\n` +
+    `*Commands:*\n` +
+    `/start - Open game menu\n` +
+    `/balance - Check your balance\n` +
+    `/history - View game history\n` +
+    `/withdraw [amount] [phone] - Request withdrawal\n` +
+    `/help - Show this menu\n\n` +
+    `*Quick Actions:*\n` +
+    `💰 Check balance anytime\n` +
+    `📜 View your game history\n` +
+    `💸 Withdraw your winnings\n\n` +
+    `👇 *Tap PLAY to start!* 👇`,
+    {
+      parse_mode: 'Markdown',
+      ...Markup.inlineKeyboard([
+        [Markup.button.webApp('🎮 PLAY BINGO', GAME_URL)]
+      ])
+    }
+  );
+});
+
+// ============ DEFAULT FALLBACK ============
+bot.on('text', async (ctx) => {
+  const text = ctx.message.text;
+  
+  if (text === '/start') return;
+  if (text === '/balance') return;
+  if (text === '/history') return;
+  if (text === '/help') return;
+  if (text.startsWith('/withdraw')) return;
+  
+  await ctx.reply(
+    `🎰 *BINGO GAME* 🎰\n\n` +
+    `Send /start to begin or /help for commands`,
+    { parse_mode: 'Markdown' }
+  );
+});
 
 module.exports = { bot, sendWinnerNotification };
