@@ -365,27 +365,28 @@ async handleAutoMark(socket, { userId, gameId, number }) {
     }
   }
 
-  async startNewGame() {
-    console.log('Starting new game...');
-    
-    this.players.forEach(player => {
-      player.cartelaIds = [];
-    });
-    
-    const gameNumber = await this.getNextGameNumber();
-    this.currentGame = await Game.create({
-      game_number: gameNumber,
-      status: 'waiting',
-      total_players: 0,
-      total_cartelas: 0,
-      prize_pool: 0,
-      commission: 0,
-      called_numbers: []
-    });
-    
-    console.log(`Game #${gameNumber} created`);
-    this.startWaitingPeriod();
-  }
+async startNewGame() {
+  console.log('Starting new game...');
+  
+  this.players.forEach(player => {
+    player.cartelaIds = [];
+    player.pendingDeductions = [];
+  });
+  
+  const gameNumber = await this.getNextGameNumber();
+  this.currentGame = await Game.create({
+    game_number: gameNumber,
+    status: 'waiting',
+    total_players: 0,
+    total_cartelas: 0,
+    prize_pool: 0,  // Start at 0
+    commission: 0,
+    called_numbers: []
+  });
+  
+  console.log(`Game #${gameNumber} created with prize pool: 0`);
+  this.startWaitingPeriod();
+}
 
   async startWaitingPeriod() {
     let waitingTime = 35;

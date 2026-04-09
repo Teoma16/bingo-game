@@ -1,13 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { User, Transaction, DepositRequest, WithdrawRequest, Game, GamePlayer } = require('../models');
+const { User, Transaction, DepositRequest, WithdrawRequest, Game, GamePlayer, AdminSetting, Advertisement } = require('../models');
 const { Op } = require('sequelize');
 const { verifyAdminToken } = require('./adminAuthRoutes');
 
-// Helper function to safely get settings
+// ============ HELPER FUNCTIONS ============
 const getSettings = async () => {
   try {
-    const { AdminSetting } = require('../models');
     const settings = await AdminSetting.findAll();
     const settingsObj = {};
     settings.forEach(s => {
@@ -20,11 +19,12 @@ const getSettings = async () => {
   }
 };
 
-// Helper function to safely get advertisement
 const getAdvertisement = async () => {
   try {
-    const { Advertisement } = require('../models');
-    const ad = await Advertisement.findOne({ where: { is_active: true }, order: [['created_at', 'DESC']] });
+    const ad = await Advertisement.findOne({ 
+      where: { is_active: true }, 
+      order: [['created_at', 'DESC']] 
+    });
     return ad || {};
   } catch (error) {
     console.log('Advertisement table not ready yet');
@@ -73,13 +73,13 @@ router.get('/recent-activities', verifyAdminToken, async (req, res) => {
     const recentDeposits = await DepositRequest.findAll({
       limit: 5,
       order: [['created_at', 'DESC']],
-     include: [{ model: User, as: 'User', attributes: ['username', 'phone_number'] }]
+      include: [{ model: User, as: 'User', attributes: ['username', 'phone_number'] }]
     });
     
     const recentWithdrawals = await WithdrawRequest.findAll({
       limit: 5,
       order: [['created_at', 'DESC']],
-     include: [{ model: User, as: 'User', attributes: ['username', 'phone_number'] }]
+      include: [{ model: User, as: 'User', attributes: ['username', 'phone_number'] }]
     });
     
     const recentGames = await Game.findAll({
@@ -167,7 +167,6 @@ router.get('/players', verifyAdminToken, async (req, res) => {
   }
 });
 
-// Adjust player balance
 router.post('/adjust-balance', verifyAdminToken, async (req, res) => {
   try {
     const { userId, amount, reason } = req.body;
@@ -196,7 +195,6 @@ router.post('/adjust-balance', verifyAdminToken, async (req, res) => {
   }
 });
 
-// Toggle player status
 router.post('/toggle-status', verifyAdminToken, async (req, res) => {
   try {
     const { userId, isActive } = req.body;
@@ -364,7 +362,6 @@ router.get('/settings', verifyAdminToken, async (req, res) => {
 
 router.post('/settings', verifyAdminToken, async (req, res) => {
   try {
-    const { AdminSetting } = require('../models');
     const settings = req.body;
     
     for (const [key, value] of Object.entries(settings)) {
@@ -382,7 +379,8 @@ router.post('/settings', verifyAdminToken, async (req, res) => {
 });
 
 // ============ ADVERTISEMENT MANAGEMENT ============
-router.get('/advertisement', verifyAdminToken, async (req, res) => {
+// Public endpoint - no auth required for players to view
+router.get('/advertisement', async (req, res) => {
   try {
     const ad = await getAdvertisement();
     res.json(ad);
@@ -392,9 +390,9 @@ router.get('/advertisement', verifyAdminToken, async (req, res) => {
   }
 });
 
+// Admin only - for managing ads
 router.post('/advertisement', verifyAdminToken, async (req, res) => {
   try {
-    const { Advertisement } = require('../models');
     const { image_url, message, is_active } = req.body;
     
     const ad = await Advertisement.create({

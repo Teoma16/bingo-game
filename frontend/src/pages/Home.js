@@ -260,7 +260,7 @@ const handleWithdraw = async () => {
     newSocket.on('game-state', (data) => {
       setGameStatus(data.status);
       // Calculate winner amount (81% of prize pool)
-      const winnerAmt = (data.prizePool || 0) * 0.81;
+      const winnerAmt = Math.max(0, (data.prizePool || 0) * 0.81);
       setWinnerAmount(winnerAmt);
     });
     
@@ -272,7 +272,8 @@ const handleWithdraw = async () => {
     
   newSocket.on('game-update', (data) => {
   setTotalPlayers(data.totalPlayers);
-  setWinnerAmount(data.winnerAmount || 0);
+  const winnerAmt = Math.max(0, (data.prizePool || 0) * 0.81);
+  setWinnerAmount(winnerAmt);
   console.log('Game update received:', data);
 });
     
@@ -332,6 +333,7 @@ const handleWithdraw = async () => {
       setAdData(response.data);
     } catch (error) {
       console.error('Failed to fetch ad:', error);
+	  setAdData(null);
     }
   };
 
@@ -390,7 +392,7 @@ const handleWithdraw = async () => {
   return (
     <div className="home-container">
       {/* Advertisement Modal */}
-      {showAdModal && adData && (
+      {showAdModal && adData && adData.message && (
         <div className="modal-overlay">
           <div className="ad-modal">
             <button className="close-btn" onClick={() => setShowAdModal(false)}>✕</button>

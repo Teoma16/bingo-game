@@ -137,7 +137,9 @@ checkWinPattern(cartelaData, markedNumbers) {
 
   // Calculate prize split among winners
   calculatePrizeSplit(prizePool, winnerCount) {
-    const totalPrize = (prizePool * this.WINNER_PERCENTAGE) / 100;
+      if (!prizePool || prizePool <= 0) return 0;
+  if (winnerCount <= 0) return 0;
+	const totalPrize = (prizePool * this.WINNER_PERCENTAGE) / 100;
     return totalPrize / winnerCount;
   }
 
