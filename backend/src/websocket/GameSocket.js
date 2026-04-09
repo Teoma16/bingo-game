@@ -48,6 +48,17 @@ class GameSocket {
       socket.on('disconnect', () => {
         this.handleDisconnect(socket);
       });
+	  socket.on('get-game-state', async () => {
+  if (this.currentGame) {
+    const winnerAmount = (this.currentGame.prize_pool * 0.81).toFixed(2);
+    socket.emit('game-state', {
+      status: this.currentGame.status,
+      prizePool: this.currentGame.prize_pool,
+      winnerAmount: parseFloat(winnerAmount),
+      calledNumbers: this.currentGame.called_numbers || []
+    });
+  }
+});
     });
     
     this.startNewGame();
@@ -327,43 +338,56 @@ async handleAutoMark(socket, { userId, gameId, number }) {
   }
 }
 
-  async handlePressBingo(socket, { userId, gameId }) {
-    console.log(`\n🔴 MANUAL BINGO by user ${userId}`);
+async handlePressBingo(socket, { userId, gameId }) {
+  console.log(`\n🔴 MANUAL BINGO PRESS by user ${userId}`);
+  
+  try {
+    if (!this.currentGame || this.currentGame.status !== 'active') {
+      socket.emit('error', { message: 'No active game' });
+      return;
+    }
     
-    try {
-      const gamePlayer = await GamePlayer.findOne({
-        where: { game_id: this.currentGame.id, user_id: userId }
-      });
-      
-      if (!gamePlayer) {
-        socket.emit('error', { message: 'Not in game' });
-        return;
-      }
-      
-      const markedNumbers = gamePlayer.marked_numbers || [];
-      console.log(`Marked numbers:`, markedNumbers);
-      
-      let hasWon = false;
-      
-      for (const luckyNumber of gamePlayer.cartela_ids) {
-        const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
-        if (cartela) {
-          const hasWon = this.gameService.checkWinPattern(cartela.card_data, markedNumbers);
-          if (hasWon) {
-            console.log(`✅ Valid BINGO! User ${userId} won with cartela ${luckyNumber}`);
-            await this.processWin(userId);
-            return;
-          }
+    const gamePlayer = await GamePlayer.findOne({
+      where: { game_id: this.currentGame.id, user_id: userId }
+    });
+    
+    if (!gamePlayer) {
+      socket.emit('error', { message: 'You are not in this game' });
+      return;
+    }
+    
+    const markedNumbers = gamePlayer.marked_numbers || [];
+    console.log(`Player ${userId} marked numbers:`, markedNumbers);
+    
+    let hasWon = false;
+    let winningCartela = null;
+    
+    // Check each cartela for win
+    for (const luckyNumber of gamePlayer.cartela_ids) {
+      const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+      if (cartela) {
+        const hasWon = this.gameService.checkWinPattern(cartela.card_data, markedNumbers);
+        if (hasWon) {
+          hasWon = true;
+          winningCartela = luckyNumber;
+          console.log(`✅ WINNING PATTERN found on cartela ${luckyNumber}`);
+          break;
         }
       }
-      
-      if (!hasWon) {
-        socket.emit('invalid-bingo', { message: 'No BINGO pattern found!' });
-      }
-    } catch (error) {
-      console.error('Bingo error:', error);
     }
+    
+    if (hasWon) {
+      console.log(`🎉 VALID BINGO! User ${userId} won with cartela ${winningCartela}`);
+      await this.processWin(userId);
+    } else {
+      console.log(`❌ INVALID BINGO! User ${userId} - no winning pattern`);
+      socket.emit('invalid-bingo', { message: 'No valid BINGO pattern found! Keep playing!' });
+    }
+  } catch (error) {
+    console.error('Bingo error:', error);
+    socket.emit('error', { message: 'Failed to verify BINGO' });
   }
+}
 
 async startNewGame() {
   console.log('Starting new game...');

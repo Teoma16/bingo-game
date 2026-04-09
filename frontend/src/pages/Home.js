@@ -260,8 +260,9 @@ const handleWithdraw = async () => {
     newSocket.on('game-state', (data) => {
       setGameStatus(data.status);
       // Calculate winner amount (81% of prize pool)
-      const winnerAmt = Math.max(0, (data.prizePool || 0) * 0.81);
+      const winnerAmt = (data.prizePool || 0) * 0.81);
       setWinnerAmount(winnerAmt);
+	  console.log('Game state - Prize pool:', data.prizePool, 'Winner amount:', winnerAmt);
     });
     
     newSocket.on('game-waiting', (data) => {
@@ -272,13 +273,17 @@ const handleWithdraw = async () => {
     
   newSocket.on('game-update', (data) => {
   setTotalPlayers(data.totalPlayers);
-  const winnerAmt = Math.max(0, (data.prizePool || 0) * 0.81);
+  const winnerAmt = (data.prizePool || 0) * 0.81;
   setWinnerAmount(winnerAmt);
-  console.log('Game update received:', data);
+   console.log('Game update - Prize pool:', data.prizePool, 'Winner amount:', winnerAmt);
 });
     
     newSocket.on('cartela-selected-success', (data) => {
       console.log('Cartela selected success:', data);
+	  toast.success(`Cartela ${data.luckyNumber} selected!`);
+  setSelectedNumbers(prev => [...prev, data.luckyNumber]);
+  // Request updated game state
+  newSocket.emit('get-game-state');
     });
     
     newSocket.on('cartela-selected', (data) => {
