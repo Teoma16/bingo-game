@@ -148,7 +148,7 @@ class GameSocket {
     }
     
     // Fix: Allow up to 2 cartelas (not less than 2)
-    if (player.cartelaIds.length >= 2) {
+    if (player.cartelaIds.length === 2) {
       socket.emit('error', { message: 'Maximum 2 cartelas allowed per game!' });
       return;
     }
@@ -191,6 +191,9 @@ class GameSocket {
     // Add cartela to player
     player.cartelaIds.push(luckyNumber);
     
+	 console.log(`Player ${userId} now has ${player.cartelaIds.length} cartela(s):`, player.cartelaIds);
+    
+	
     // Update game stats
     this.currentGame.prize_pool += 10;
     this.currentGame.total_cartelas += 1;

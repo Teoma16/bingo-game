@@ -167,69 +167,57 @@ const handleWithdraw = async () => {
 
   // Handle number click - Select or Deselect
   const handleNumberClick = async (number) => {
-    if (gameStatus !== 'waiting') {
-      toast.error('Game already started! Please wait for next game.');
-      return;
+  if (gameStatus !== 'waiting') {
+    toast.error('Game already started! Please wait for next game.');
+    return;
+  }
+  
+  if (selectedNumbers.includes(number)) {
+    // DESELECT - This is YOUR selected number
+    if (socket) {
+      socket.emit('deselect-cartela', {
+        luckyNumber: number,
+        userId: user.id
+      });
     }
-    
-    if (takenNumbers.includes(number) && !selectedNumbers.includes(number)) {
+    setSelectedNumbers(prev => prev.filter(n => n !== number));
+    setSelectedCartelas(prev => prev.filter(c => c.lucky_number !== number));
+    toast(`Cartela ${number} deselected`);
+  } else {
+    // SELECT - This is a new number
+    // Check if number is taken by another player
+    if (takenNumbers.includes(number)) {
       toast.error('This lucky number is already taken by another player!');
       return;
     }
     
-    if (selectedNumbers.includes(number)) {
-      // DESELECT
+    if (selectedNumbers.length >= 2) {
+      toast.error('Maximum 2 cartelas allowed per game!');
+      return;
+    }
+    
+    if (balance < (selectedNumbers.length + 1) * 10) {
+      toast.error(`Insufficient balance! Need ${(selectedNumbers.length + 1) * 10} Birr for ${selectedNumbers.length + 1} cartela(s).`);
+      return;
+    }
+    
+    const cartelaData = await fetchCartela(number);
+    if (cartelaData) {
       if (socket) {
-        socket.emit('deselect-cartela', {
+        socket.emit('select-cartela', {
           luckyNumber: number,
           userId: user.id
         });
       }
-      setSelectedNumbers(prev => prev.filter(n => n !== number));
-      setSelectedCartelas(prev => prev.filter(c => c.lucky_number !== number));
-      // Update localStorage
-      const updatedCartelas = selectedCartelas.filter(c => c.lucky_number !== number);
-      localStorage.setItem('userCartelas', JSON.stringify(updatedCartelas));
-      toast(`Left game. Cartela ${number} deselected`);
-    } else {
-      // SELECT
-      if (selectedNumbers.length >= 2) {
-        toast.error('Maximum 2 cartelas allowed per game!');
-        return;
-      }
-      
-      if (balance < 10) {
-        toast.error('Insufficient balance! Please deposit money.');
-        return;
-      }
-      
-      const cartelaData = await fetchCartela(number);
-      if (cartelaData) {
-        if (socket) {
-          socket.emit('select-cartela', {
-            luckyNumber: number,
-            userId: user.id
-          });
-        }
-        setSelectedNumbers(prev => [...prev, number]);
-        
-        // Create new cartela object
-        const newCartela = {
-          lucky_number: number,
-          card_data: cartelaData.card_data
-        };
-        
-        setSelectedCartelas(prev => {
-          const newCartelas = [...prev, newCartela];
-          // Save to localStorage
-          localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
-          return newCartelas;
-        });
-        
-        toast.success(`Cartela ${number} selected!`);
-      }
+      setSelectedNumbers(prev => [...prev, number]);
+      setSelectedCartelas(prev => [...prev, {
+        lucky_number: number,
+        card_data: cartelaData.card_data
+      }]);
+      toast.success(`Cartela ${number} selected!`);
     }
-  };
+  }
+};
 
   useEffect(() => {
     // Fetch advertisement
@@ -275,7 +263,7 @@ const handleWithdraw = async () => {
   setTotalPlayers(data.totalPlayers);
  // const winnerAmt = (data.prizePool || 0) * 0.81;
   setWinnerAmount(data.winnerAmount || 0);
-   console.log('Game update - Prize pool:', data.prizePool, 'Winner amount:', data.winnerAmount);
+   console.log('Game update - Prize pool:', data);
 });
     
     newSocket.on('cartela-selected-success', (data) => {
@@ -341,9 +329,12 @@ newSocket.on('game-started', (data) => {
     navigate('/login');
   };
 
-  const isNumberDisabled = (number) => {
-    return gameStatus !== 'waiting' || (takenNumbers.includes(number) && !selectedNumbers.includes(number));
-  };
+ const isNumberDisabled = (number) => {
+  // Only disable if game is not waiting OR number is taken by another player
+  if (gameStatus !== 'waiting') return true;
+  if (takenNumbers.includes(number) && !selectedNumbers.includes(number)) return true;
+  return false;
+};
 
   // Render a single cartela (for display below lucky numbers)
   const renderCartela = (cartela, index) => {
@@ -435,8 +426,8 @@ newSocket.on('game-started', (data) => {
                 disabled={isNumberDisabled(number)}
               >
                 {number}
-                {selectedNumbers.includes(number) && ' ✓'}
-                {takenNumbers.includes(number) && !selectedNumbers.includes(number) && ' 🔒'}
+			{selectedNumbers.includes(number)}{/* && ' ✓'}*/}
+{takenNumbers.includes(number) && !selectedNumbers.includes(number)}{/* && ' 🔒'}*/}
               </button>
             ))}
           </div>
