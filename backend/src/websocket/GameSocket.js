@@ -136,46 +136,57 @@ class GameSocket {
       return;
     }
     
-    if (player.cartelaIds.length >= 2) {
-      socket.emit('error', { message: 'Maximum 2 cartelas allowed per game!' });
+    // Get user to check balance
+    const user = await User.findByPk(userId);
+    if (!user) {
+      socket.emit('error', { message: 'User not found' });
       return;
     }
     
+    // Calculate total cost based on cartelas already selected + this new one
+    const totalCartelas = player.cartelaIds.length + 1;
+    const totalCost = totalCartelas * 10;
+    
+    // Check if user has sufficient balance
+    if (user.wallet_balance < totalCost) {
+      socket.emit('error', { message: `Insufficient balance. Need ${totalCost} Birr for ${totalCartelas} cartela(s). Your balance: ${user.wallet_balance} Birr` });
+      return;
+    }
+    
+    // Check max cartelas per player
+    const settings = await this.gameService.getAdminSettings();
+    if (player.cartelaIds.length >= settings.max_cartelas_per_player) {
+      socket.emit('error', { message: `Maximum ${settings.max_cartelas_per_player} cartelas allowed per game!` });
+      return;
+    }
+    
+    // Check if lucky number is already taken by ANY player
     const existingPlayer = Array.from(this.players.values()).some(p => 
       p.cartelaIds.includes(luckyNumber)
     );
     
     if (existingPlayer) {
-      socket.emit('error', { message: 'Lucky number already taken' });
+      socket.emit('error', { message: 'Lucky number already taken by another player!' });
       return;
     }
     
-    const user = await User.findByPk(userId);
-    if (!user || user.wallet_balance < 10) {
-      socket.emit('error', { message: 'Insufficient balance' });
-      return;
-    }
-    
+    // Get cartela data
     const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
     if (!cartela) {
       socket.emit('error', { message: 'Invalid lucky number' });
       return;
     }
     
+    // Add cartela to player
     player.cartelaIds.push(luckyNumber);
     
-    // DEBUG: Log before updating prize pool
-    console.log(`[PRIZE DEBUG] Before select - Prize pool: ${this.currentGame.prize_pool}`);
-    
-    // Update game stats
-    this.currentGame.prize_pool = (parseFloat(this.currentGame.prize_pool) || 0) + 10;
-    this.currentGame.total_cartelas = (this.currentGame.total_cartelas || 0) + 1;
+    // Update game prize pool
+    this.currentGame.prize_pool += 10;
+    this.currentGame.total_cartelas += 1;
     this.currentGame.total_players = this.getUniquePlayerCount();
     await this.currentGame.save();
     
-    // DEBUG: Log after updating prize pool
-    console.log(`[PRIZE DEBUG] After select - Prize pool: ${this.currentGame.prize_pool}`);
-    
+    // Create or update game player record
     let gamePlayer = await GamePlayer.findOne({
       where: { game_id: this.currentGame.id, user_id: userId }
     });
@@ -193,11 +204,11 @@ class GameSocket {
       });
     }
     
-    const winnerAmount = ((parseFloat(this.currentGame.prize_pool) || 0) * 0.81).toFixed(2);
+    const winnerAmount = (this.currentGame.prize_pool * 0.81).toFixed(2);
     this.io.emit('game-update', {
       totalPlayers: this.getUniquePlayerCount(),
       totalCartelas: this.currentGame.total_cartelas,
-      prizePool: parseFloat(this.currentGame.prize_pool) || 0,
+      prizePool: this.currentGame.prize_pool,
       winnerAmount: parseFloat(winnerAmount)
     });
     
@@ -210,7 +221,7 @@ class GameSocket {
     socket.emit('cartela-selected-success', {
       luckyNumber,
       cartelaData: cartela.card_data,
-      message: 'Cartela selected!'
+      message: `Cartela ${luckyNumber} selected! Total cost: ${totalCartelas * 10} Birr`
     });
     
   } catch (error) {

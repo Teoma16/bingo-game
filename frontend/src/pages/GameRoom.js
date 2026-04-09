@@ -61,7 +61,7 @@ const [showConfetti, setShowConfetti] = useState(false);
 
   const fetchUserCartelas = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/game/user-cartelas/${user.id}`);
+      const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/game/user-cartelas/${user.id}`);
       console.log('API cartelas response:', response.data);
       if (response.data.cartelas && response.data.cartelas.length > 0) {
         setSelectedCartelas(response.data.cartelas);
@@ -82,7 +82,7 @@ const [showConfetti, setShowConfetti] = useState(false);
   };
 
   useEffect(() => {
-    const newSocket = io('http://localhost:5000' || 'https://bingo-game-production-dd0b.up.railway.app');
+    const newSocket = io('https://bingo-game-production-dd0b.up.railway.app');
     setSocket(newSocket);
     
     if (user && user.id) {
@@ -340,11 +340,11 @@ useEffect(() => {
         </div>
         <div className="prize-info">
           <div className="winner-prize-display">
-            🏆 Winner Gets: {winnerAmount.toFixed(2)} Birr (81%)
+            🏆 Winner Gets: {winnerAmount.toFixed(2)} Birr 
           </div>
-          <div className="commission-display">
+		  {/* <div className="commission-display">
             📊 Commission: {(prizePool * 0.19).toFixed(2)} Birr (19%)
-          </div>
+          </div>*/}
         </div>
         <div className="game-controls">
           <button
