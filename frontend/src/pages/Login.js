@@ -19,7 +19,7 @@ const Login = ({ setAuth, setUser }) => {
     
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post('https://bingo-game-production-dd0b.up.railway.app/api/auth/login', {
         phoneNumber
       });
       
