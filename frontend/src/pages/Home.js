@@ -20,8 +20,7 @@ const Home = ({ user, setUser }) => {
   const [adData, setAdData] = useState(null);
   const [showFooter, setShowFooter] = useState(false);
   const [takenNumbers, setTakenNumbers] = useState([]);
-const socket = io('https://bingo-game-production-dd0b.up.railway.app');
-const apiUrl = 'https://bingo-game-production-dd0b.up.railway.app';
+
 
 // Add these state variables after your existing states
 const [showBalanceModal, setShowBalanceModal] = useState(false);
@@ -237,7 +236,7 @@ const handleWithdraw = async () => {
     fetchAdvertisement();
     
     // Initialize WebSocket
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io('http://localhost:5000' || 'https://bingo-game-production-dd0b.up.railway.app');
     setSocket(newSocket);
     
     // Generate lucky numbers 1-100
