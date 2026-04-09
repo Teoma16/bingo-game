@@ -134,7 +134,7 @@ class GameSocket {
   }
 }
 
-  async handleSelectCartela(socket, { luckyNumber, userId }) {
+ async handleSelectCartela(socket, { luckyNumber, userId }) {
   try {
     const player = this.players.get(socket.id);
     if (!player || player.userId !== userId) {
@@ -147,7 +147,7 @@ class GameSocket {
       return;
     }
     
-    // Check max cartelas per player
+    // Fix: Allow up to 2 cartelas (not less than 2)
     if (player.cartelaIds.length >= 2) {
       socket.emit('error', { message: 'Maximum 2 cartelas allowed per game!' });
       return;
@@ -174,10 +174,10 @@ class GameSocket {
     const newTotalCartelas = player.cartelaIds.length + 1;
     const totalCost = newTotalCartelas * 10;
     
-    // Check if user has sufficient balance for ALL cartelas
+    // Check if user has sufficient balance
     if (user.wallet_balance < totalCost) {
       socket.emit('error', { 
-        message: `Insufficient balance! You need ${totalCost} Birr for ${newTotalCartelas} cartela(s). Your balance: ${user.wallet_balance} Birr` 
+        message: `Insufficient balance! Need ${totalCost} Birr for ${newTotalCartelas} cartela(s). Your balance: ${user.wallet_balance} Birr` 
       });
       return;
     }
@@ -191,7 +191,7 @@ class GameSocket {
     // Add cartela to player
     player.cartelaIds.push(luckyNumber);
     
-    // Update game stats - ONLY update prize pool, don't deduct yet
+    // Update game stats
     this.currentGame.prize_pool += 10;
     this.currentGame.total_cartelas += 1;
     this.currentGame.total_players = this.getUniquePlayerCount();
@@ -215,10 +215,10 @@ class GameSocket {
       });
     }
     
-    // Calculate winner amount (81% of prize pool)
+    // Calculate winner amount
     const winnerAmount = (this.currentGame.prize_pool * 0.81).toFixed(2);
     
-    // Broadcast updated game state to ALL players
+    // Broadcast update
     this.io.emit('game-update', {
       totalPlayers: this.getUniquePlayerCount(),
       totalCartelas: this.currentGame.total_cartelas,
@@ -235,7 +235,7 @@ class GameSocket {
     socket.emit('cartela-selected-success', {
       luckyNumber,
       cartelaData: cartela.card_data,
-      message: `Cartela ${luckyNumber} selected!`
+      message: `Cartela ${luckyNumber} selected! (${player.cartelaIds.length}/2 cartelas)`
     });
     
   } catch (error) {
