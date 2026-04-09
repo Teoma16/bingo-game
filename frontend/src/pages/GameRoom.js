@@ -27,6 +27,9 @@ const GameRoom = ({ user }) => {
 const [winner, setWinner] = useState(null);
 const [showWinnerModal, setShowWinnerModal] = useState(false);
 const [showConfetti, setShowConfetti] = useState(false);
+
+const socket = io('https://bingo-game-production-dd0b.up.railway.app');
+const apiUrl = 'https://bingo-game-production-dd0b.up.railway.app';
   // Calculate winner amount (81% of prize pool)
   useEffect(() => {
     const calculatedWinnerAmount = prizePool * 0.81;
