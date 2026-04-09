@@ -422,7 +422,7 @@ newSocket.on('game-started', (data) => {
       {/* Lucky Numbers Grid */}
       <div className="lucky-numbers-section">
         <div className="lucky-numbers-grid">
-          <h2>Select Your Lucky Numbers (1-100)</h2>
+          <h2>የእድል ቁጥር ይምረጡ </h2>
           <div className="numbers-container">
             {luckyNumbers.map(number => (
               <button

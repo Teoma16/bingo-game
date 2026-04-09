@@ -347,7 +347,7 @@ useEffect(() => {
             📊 Commission: {(prizePool * 0.19).toFixed(2)} Birr (19%)
           </div>*/}
         </div>
-        <div className="game-controls">
+		{/*  <div className="game-controls">
           <button
             className={`mode-toggle ${autoMark ? 'auto' : 'manual'}`}
             onClick={() => setAutoMark(!autoMark)}
@@ -357,7 +357,7 @@ useEffect(() => {
           <button className="bingo-button" onClick={handlePressBingo}>
             🎲 BINGO!
           </button>
-        </div>
+        </div>*/}
       </div>
       
       <div className="game-content">

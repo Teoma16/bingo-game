@@ -81,20 +81,20 @@ padding-bottom:6px;
 .lucky-numbers-grid {
   background: rgba(0, 0, 0, 0.6);
   border-radius: 15px;
-  padding: 20px;
+  padding: 10px;
   margin-bottom: 80px;
 }
 
 .lucky-numbers-grid h2 {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   color: #ffd700;
 }
 
 .numbers-container {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  gap: 2px;
+  gap: 1px;
 }
 
 .lucky-number {
@@ -103,18 +103,17 @@ padding-bottom:6px;
   border: 1px solid #ffd700;
   padding: 12px 5px;
   text-align: center;
-  border-radius: 8px;
+  border-radius: 2px;
   cursor: pointer;
   font-weight: bold;
-  transition: all 0.2s;
 }
-
+/*
 .lucky-number:hover:not(:disabled) {
   background: #ffd700;
   color: #000;
   transform: scale(1.05);
 }
-
+*/
 .lucky-number.selected {
   background: #00ff00;
   color: #000;
@@ -218,12 +217,12 @@ padding-bottom:6px;
 @media (max-width: 768px) {
   .numbers-container {
     grid-template-columns: repeat(10, 1fr);
-    gap: 2px;
+    gap: 1px;
   }
   
   .lucky-number {
-    padding: 8px 3px;
-    font-size: 12px;
+    padding: 6px 2px;
+    font-size: 14px;
   }
   
   .header {
