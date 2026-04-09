@@ -299,33 +299,25 @@ const handleWithdraw = async () => {
       setTimeRemaining(data.timeRemaining);
     });
     
-    newSocket.on('game-started', (data) => {
-      console.log('Game started! Selected cartelas:', selectedCartelas);
-      
-      // Get cartelas from state or localStorage
-      let cartelasToSend = selectedCartelas;
-      if (cartelasToSend.length === 0) {
-        const savedCartelas = localStorage.getItem('userCartelas');
-        if (savedCartelas) {
-          cartelasToSend = JSON.parse(savedCartelas);
-        }
-      }
-      
-      // Calculate winner amount
-      const winnerAmt = (data.prizePool || 0) * 0.81;
-      
-      toast.success(data.message);
-      
-      navigate(`/game/${user.id}`, { 
-        state: { 
-          gameId: data.gameId,
-          gameNumber: data.gameNumber,
-          winnerAmount: winnerAmt,
-          prizePool: data.prizePool,
-          selectedCartelas: cartelasToSend 
-        } 
-      });
-    });
+  // In your game-started event listener
+newSocket.on('game-started', (data) => {
+  console.log('Game started! Prize pool:', data.prizePool);
+  
+  // Calculate winner amount from prize pool
+  const winnerAmt = (data.prizePool || 0) * 0.81;
+  
+  toast.success(data.message);
+  
+  navigate(`/game/${user.id}`, { 
+    state: { 
+      gameId: data.gameId,
+      gameNumber: data.gameNumber,
+      prizePool: data.prizePool,
+      winnerAmount: winnerAmt,
+      selectedCartelas: selectedCartelas 
+    } 
+  });
+});
     
     return () => {
       if (newSocket) newSocket.disconnect();
@@ -424,7 +416,7 @@ const handleWithdraw = async () => {
           <div className="timer">⏰ ቀጣይ ጨዋታ በ : {timeRemaining}s ይጀምራል </div>
 			  {/* <div className="players">👥 Players: {totalPlayers}</div>*/}
         </div>
-        <button className="logout-btn" onClick={handleLogout}>Logout</button>
+        {/*<button className="logout-btn" onClick={handleLogout}>Logout</button>*/}
       </div>
       
       {/* Lucky Numbers Grid */}

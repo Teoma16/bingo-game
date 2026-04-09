@@ -339,14 +339,17 @@ async handleAutoMark(socket, { userId, gameId, number }) {
 }
 
 async handlePressBingo(socket, { userId, gameId }) {
-  console.log(`\n🔴 MANUAL BINGO PRESS by user ${userId}`);
+  console.log(`\n========== MANUAL BINGO PRESS ==========`);
+  console.log(`User ${userId} pressed BINGO button`);
   
   try {
+    // Check if game is active
     if (!this.currentGame || this.currentGame.status !== 'active') {
       socket.emit('error', { message: 'No active game' });
       return;
     }
     
+    // Get player's game record
     const gamePlayer = await GamePlayer.findOne({
       where: { game_id: this.currentGame.id, user_id: userId }
     });
@@ -357,31 +360,45 @@ async handlePressBingo(socket, { userId, gameId }) {
     }
     
     const markedNumbers = gamePlayer.marked_numbers || [];
-    console.log(`Player ${userId} marked numbers:`, markedNumbers);
+    console.log(`Marked numbers for user ${userId}:`, markedNumbers);
+    console.log(`Cartelas for user ${userId}:`, gamePlayer.cartela_ids);
     
     let hasWon = false;
     let winningCartela = null;
     
-    // Check each cartela for win
+    // Check each cartela for winning pattern
     for (const luckyNumber of gamePlayer.cartela_ids) {
-      const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+      const cartela = await Cartela.findOne({ 
+        where: { lucky_number: luckyNumber }
+      });
+      
       if (cartela) {
-        const hasWon = this.gameService.checkWinPattern(cartela.card_data, markedNumbers);
+        console.log(`Checking cartela ${luckyNumber}...`);
+        console.log(`Cartela data:`, JSON.stringify(cartela.card_data, null, 2));
+        
+        const hasWon = this.gameService.checkWinPattern(
+          cartela.card_data,
+          markedNumbers
+        );
+        
+        console.log(`Cartela ${luckyNumber} has winning pattern: ${hasWon}`);
+        
         if (hasWon) {
           hasWon = true;
           winningCartela = luckyNumber;
-          console.log(`✅ WINNING PATTERN found on cartela ${luckyNumber}`);
           break;
         }
       }
     }
     
     if (hasWon) {
-      console.log(`🎉 VALID BINGO! User ${userId} won with cartela ${winningCartela}`);
+      console.log(`✅✅✅ WINNER VALIDATED! User ${userId} with cartela ${winningCartela}`);
       await this.processWin(userId);
     } else {
-      console.log(`❌ INVALID BINGO! User ${userId} - no winning pattern`);
-      socket.emit('invalid-bingo', { message: 'No valid BINGO pattern found! Keep playing!' });
+      console.log(`❌ INVALID BINGO! No winning pattern found`);
+      socket.emit('invalid-bingo', { 
+        message: 'No valid BINGO pattern found! Keep playing!' 
+      });
     }
   } catch (error) {
     console.error('Bingo error:', error);
@@ -606,45 +623,33 @@ async startNewGame() {
 }
 
   async processWin(winnerId) {
-  console.log(`\n🏆🏆🏆 PROCESSING WINNER - User ${winnerId} 🏆🏆🏆`);
+  console.log(`\n========== PROCESSING WINNER ==========`);
+  console.log(`Winner ID: ${winnerId}`);
   
+  // Stop the game interval
   if (this.gameInterval) {
     clearInterval(this.gameInterval);
     this.gameInterval = null;
   }
   
-  // Get fresh game data
-  const freshGame = await Game.findByPk(this.currentGame.id);
-  const prizePoolNum = parseFloat(freshGame.prize_pool) || 0;
-  
   // Calculate prize (81% of prize pool)
+  const prizePoolNum = parseFloat(this.currentGame.prize_pool) || 0;
   const totalPrize = (prizePoolNum * 81) / 100;
   const roundedPrize = Math.round(totalPrize * 100) / 100;
   
-  console.log(`💰 Prize pool: ${prizePoolNum}, Winner gets: ${roundedPrize}`);
+  console.log(`Prize pool: ${prizePoolNum}, Winner gets: ${roundedPrize}`);
   
-  if (roundedPrize <= 0) {
-    console.log(`⚠️ Prize amount is zero or negative`);
-    this.io.emit('game-ended', {
-      winners: [],
-      prizeAmount: 0,
-      message: `Game ended - No valid prize amount!`
-    });
-    setTimeout(() => this.startNewGame(), 5000);
-    return;
-  }
-  
-  // Credit the winner - FIX: Use proper number addition, not string concatenation
+  // Credit the winner
   const user = await User.findByPk(winnerId);
   if (user) {
     const oldBalance = parseFloat(user.wallet_balance) || 0;
-    const newBalance = oldBalance + roundedPrize;  // This adds numbers, not strings!
-    
-    console.log(`💰 Old balance: ${oldBalance}, Adding: ${roundedPrize}, New balance: ${newBalance}`);
+    const newBalance = oldBalance + roundedPrize;
     
     user.wallet_balance = newBalance;
     user.total_won = (user.total_won || 0) + 1;
     await user.save();
+    
+    console.log(`Winner balance updated: ${oldBalance} -> ${newBalance}`);
     
     await Transaction.create({
       user_id: winnerId,
@@ -652,38 +657,28 @@ async startNewGame() {
       amount: roundedPrize,
       balance_after: newBalance,
       status: 'completed',
-      description: `Won ${roundedPrize} Birr from game #${freshGame.game_number}`
+      description: `Won ${roundedPrize} Birr from game #${this.currentGame.game_number}`
     });
   }
   
-  // Update game player record
+  // Update game record
   await GamePlayer.update(
     { is_winner: true, prize_amount: roundedPrize },
-    { where: { game_id: freshGame.id, user_id: winnerId } }
+    { where: { game_id: this.currentGame.id, user_id: winnerId } }
   );
   
-  // Update game record
-  freshGame.status = 'completed';
-  freshGame.winner_ids = [winnerId];
-  freshGame.winner_amount = roundedPrize;
-  freshGame.end_time = new Date();
-  await freshGame.save();
+  this.currentGame.status = 'completed';
+  this.currentGame.winner_ids = [winnerId];
+  this.currentGame.winner_amount = roundedPrize;
+  this.currentGame.end_time = new Date();
+  await this.currentGame.save();
   
-  // Update current game reference
-  this.currentGame = freshGame;
-  
-  // Announce winner
- // Announce winner with fancy data
-this.io.emit('game-ended', {
-  winners: [{ 
-    userId: winnerId, 
-    amount: roundedPrize,
-    totalAmount: roundedPrize,
-    bonus: 0
-  }],
-  prizeAmount: roundedPrize,
-  message: `🎉 BINGO! ${user?.username || 'Player'} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
-});
+  // Announce winner to ALL players
+  this.io.emit('game-ended', {
+    winners: [{ userId: winnerId, amount: roundedPrize }],
+    prizeAmount: roundedPrize,
+    message: `🎉 BINGO! ${user?.username || 'Player'} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
+  });
   
   // Start next game after 5 seconds
   setTimeout(() => {
