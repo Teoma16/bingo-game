@@ -260,9 +260,9 @@ const handleWithdraw = async () => {
     newSocket.on('game-state', (data) => {
       setGameStatus(data.status);
       // Calculate winner amount (81% of prize pool)
-      const winnerAmt = (data.prizePool || 0) * 0.81;
-      setWinnerAmount(winnerAmt);
-	  console.log('Game state - Prize pool:', data.prizePool, 'Winner amount:', winnerAmt);
+      //const winnerAmt = (data.prizePool || 0) * 0.81;
+      setWinnerAmount(data.winnerAmount || 0);
+	  console.log('Game state - Prize pool:', data.prizePool, 'Winner amount:', data.winnerAmount);
     });
     
     newSocket.on('game-waiting', (data) => {
@@ -273,9 +273,9 @@ const handleWithdraw = async () => {
     
   newSocket.on('game-update', (data) => {
   setTotalPlayers(data.totalPlayers);
-  const winnerAmt = (data.prizePool || 0) * 0.81;
-  setWinnerAmount(winnerAmt);
-   console.log('Game update - Prize pool:', data.prizePool, 'Winner amount:', winnerAmt);
+ // const winnerAmt = (data.prizePool || 0) * 0.81;
+  setWinnerAmount(data.winnerAmount || 0);
+   console.log('Game update - Prize pool:', data.prizePool, 'Winner amount:', data.winnerAmount);
 });
     
     newSocket.on('cartela-selected-success', (data) => {
@@ -412,7 +412,7 @@ newSocket.on('game-started', (data) => {
           <p>💰 Balance: {balance} Birr</p>
         </div>
         <div className="game-info">
-          <div className="winner-prize">🏆 ደራሽ : {winnerAmount.toFixed(2)} Birr</div>
+          <div className="winner-prize">🏆 ደራሽ : {Math.max(0, winnerAmount).toFixed(2)} Birr</div>
           <div className="timer">⏰ ቀጣይ ጨዋታ በ : {timeRemaining}s ይጀምራል </div>
 			  {/* <div className="players">👥 Players: {totalPlayers}</div>*/}
         </div>
