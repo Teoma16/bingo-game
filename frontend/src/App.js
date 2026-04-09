@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login';
@@ -8,6 +8,15 @@ import GameRoom from './pages/GameRoom';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [user, setUser] = React.useState(null);
+ useEffect(() => {
+    // Initialize Telegram Web App
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand(); // Expand to full screen
+      tg.enableClosingConfirmation();
+    }
+  }, []);
 
   React.useEffect(() => {
     const token = localStorage.getItem('token');
