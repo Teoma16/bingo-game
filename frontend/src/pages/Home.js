@@ -412,7 +412,7 @@ newSocket.on('game-started', (data) => {
           <p>💰 Balance: {balance} Birr</p>
         </div>
         <div className="game-info">
-          <div className="winner-prize">🏆 ደራሽ : {Math.max(0, winnerAmount).toFixed(2)} Birr</div>
+          <div className="winner-prize">🏆 ደራሽ : {Math.max(0, data.winnerAmount).toFixed(2)} Birr</div>
           <div className="timer">⏰ ቀጣይ ጨዋታ በ : {timeRemaining}s ይጀምራል </div>
 			  {/* <div className="players">👥 Players: {totalPlayers}</div>*/}
         </div>
