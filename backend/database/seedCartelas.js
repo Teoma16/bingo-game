@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { sequelize, Cartela } = require('../src/models');
 
 // Generate random numbers within column ranges

@@ -4,7 +4,8 @@
   "description": "Bingo Game Backend",
   "main": "backend/src/server.js",
   "scripts": {
-    "start": "node backend/src/server.js"
+    "start": "node backend/src/server.js",
+	 "postinstall": "cd backend && npm install"
   },
   "engines": {
     "node": "18.x"
