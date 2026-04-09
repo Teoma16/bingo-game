@@ -38,6 +38,20 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/cartela', cartelaRoutes);
 
+// Update the CORS configuration
+app.use(cors({
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:3001', 
+    'http://127.0.0.1:3000', 
+    'http://127.0.0.1:3001',
+    'https://earnest-amazement-production.up.railway.app',  // Add your frontend URL
+    'https://bingo-game-production-dd0b.up.railway.app'      // Also allow backend itself
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
 // Admin auth routes - make sure this is correct
 app.use('/api/admin/auth', adminAuthRoutes.router || adminAuthRoutes);
 
