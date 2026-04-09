@@ -7,7 +7,9 @@ class GameSocket {
     this.io = new Server(server, {
       cors: {
         origin: "*",
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
+		credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"]
       }
     });
     this.gameService = new GameService();
