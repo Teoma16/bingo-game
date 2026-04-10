@@ -633,3 +633,39 @@ padding-bottom:6px;
   padding: 40px;
   color: #888;
 }
+.lucky-number {
+  background: #2a2a2a;
+  color: #ffd700;
+  border: 1px solid #ffd700;
+  padding: 12px 5px;
+  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.lucky-number.selected {
+  background: #00ff00;
+  color: #000;
+  border-color: #00ff00;
+}
+
+.lucky-number.taken {
+  background: #ff4444;
+  color: #fff;
+  border-color: #ff4444;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.lucky-number:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lucky-number:not(:disabled):hover {
+  transform: scale(1.05);
+  background: #ffd700;
+  color: #000;
+}
