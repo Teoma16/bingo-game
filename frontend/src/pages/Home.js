@@ -305,11 +305,18 @@ newSocket.on('game-state', (data) => {
     });
     
   // In your game-started event listener
+// In your game-started event listener
 newSocket.on('game-started', (data) => {
   console.log('Game started! Prize pool:', data.prizePool);
+  console.log('Selected cartelas before navigate:', selectedCartelas);
   
   // Calculate winner amount from prize pool
   const winnerAmt = (data.prizePool || 0) * 0.81;
+  
+  // Make sure cartelas are saved to localStorage before navigating
+  if (selectedCartelas.length > 0) {
+    localStorage.setItem('userCartelas', JSON.stringify(selectedCartelas));
+  }
   
   toast.success(data.message);
   

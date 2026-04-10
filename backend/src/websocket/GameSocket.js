@@ -229,7 +229,11 @@ class GameSocket {
         message: `Cartela ${luckyNumber} selected! (${player.cartelaIds.length}/2 cartelas)`
       });
       
-    } catch (error) {
+	  // After adding cartela, add this debug log
+console.log(`[PRIZE DEBUG] Prize pool before: ${this.currentGame.prize_pool - 10}, after: ${this.currentGame.prize_pool}`);
+console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 0.81}`);
+	  
+	     } catch (error) {
       console.error('Select cartela error:', error);
       socket.emit('error', { message: error.message || 'Failed to select cartela' });
     }

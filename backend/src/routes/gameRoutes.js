@@ -38,7 +38,7 @@ router.get('/user-cartelas/:userId', authenticate, async (req, res) => {
     const { userId } = req.params;
     
     const currentGame = await Game.findOne({
-      where: { status: 'active' },
+       where: { status: ['active', 'waiting'] },
       order: [['created_at', 'DESC']]
     });
     
@@ -67,7 +67,7 @@ router.get('/user-cartelas/:userId', authenticate, async (req, res) => {
         cartelas.push({
           lucky_number: luckyNumber,
           card_data: cartela.card_data,
-          marked_numbers: gamePlayer.marked_numbers || []
+         // marked_numbers: gamePlayer.marked_numbers || []
         });
       }
     }
