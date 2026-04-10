@@ -126,167 +126,172 @@ class GameSocket {
   }
 
   async handleSelectCartela(socket, { luckyNumber, userId }) {
-    try {
-      const player = this.players.get(socket.id);
-      if (!player || player.userId !== userId) {
-        socket.emit('error', { message: 'Invalid session' });
-        return;
-      }
-      
-      if (!this.currentGame || this.currentGame.status !== 'waiting') {
-        socket.emit('error', { message: 'Game already started. Cannot join now.' });
-        return;
-      }
-      
-      // Check if already has 2 cartelas
-      if (player.cartelaIds.length >= 2) {
-        socket.emit('error', { message: 'Maximum 2 cartelas allowed per game! You already have 2 cartelas.' });
-        return;
-      }
-      
-      // Check if lucky number is already taken
-      if (player.cartelaIds.includes(luckyNumber)) {
-        socket.emit('error', { message: 'You already selected this number!' });
-        return;
-      }
-      
-      const existingPlayer = Array.from(this.players.values()).some(p => 
-        p.cartelaIds.includes(luckyNumber)
-      );
-      
-      if (existingPlayer) {
-        socket.emit('error', { message: 'Lucky number already taken by another player!' });
-        return;
-      }
-      
-      const user = await User.findByPk(userId);
-      if (!user) {
-        socket.emit('error', { message: 'User not found' });
-        return;
-      }
-      
-      const newTotalCartelas = player.cartelaIds.length + 1;
-      const totalCost = newTotalCartelas * 10;
-      
-      if (user.wallet_balance < totalCost) {
-        socket.emit('error', { 
-          message: `Insufficient balance! Need ${totalCost} Birr for ${newTotalCartelas} cartela(s). Your balance: ${user.wallet_balance} Birr` 
-        });
-        return;
-      }
-      
-      const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
-      if (!cartela) {
-        socket.emit('error', { message: 'Invalid lucky number' });
-        return;
-      }
-      
-      player.cartelaIds.push(luckyNumber);
-      
-      this.currentGame.prize_pool += 10;
-      this.currentGame.total_cartelas += 1;
-      this.currentGame.total_players = this.getUniquePlayerCount();
-      await this.currentGame.save();
-      
-      let gamePlayer = await GamePlayer.findOne({
-        where: { game_id: this.currentGame.id, user_id: userId }
+  try {
+    const player = this.players.get(socket.id);
+    if (!player || player.userId !== userId) {
+      socket.emit('error', { message: 'Invalid session' });
+      return;
+    }
+    
+    if (!this.currentGame || this.currentGame.status !== 'waiting') {
+      socket.emit('error', { message: 'Game already started. Cannot join now.' });
+      return;
+    }
+    
+    // Check if already has 2 cartelas
+    if (player.cartelaIds.length >= 2) {
+      socket.emit('error', { message: 'Maximum 2 cartelas allowed per game! You already have 2 cartelas.' });
+      return;
+    }
+    
+    // Check if lucky number is already taken
+    if (player.cartelaIds.includes(luckyNumber)) {
+      socket.emit('error', { message: 'You already selected this number!' });
+      return;
+    }
+    
+    const existingPlayer = Array.from(this.players.values()).some(p => 
+      p.cartelaIds.includes(luckyNumber)
+    );
+    
+    if (existingPlayer) {
+      socket.emit('error', { message: 'Lucky number already taken by another player!' });
+      return;
+    }
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      socket.emit('error', { message: 'User not found' });
+      return;
+    }
+    
+    const newTotalCartelas = player.cartelaIds.length + 1;
+    const totalCost = newTotalCartelas * 10;
+    
+    // Convert balance to number
+    const userBalance = parseFloat(user.wallet_balance) || 0;
+    
+    if (userBalance < totalCost) {
+      socket.emit('error', { 
+        message: `Insufficient balance! Need ${totalCost} Birr for ${newTotalCartelas} cartela(s). Your balance: ${userBalance} Birr` 
       });
-      
-      if (gamePlayer) {
-        const updatedCartelas = [...gamePlayer.cartela_ids, luckyNumber];
-        gamePlayer.cartela_ids = updatedCartelas;
-        await gamePlayer.save();
-      } else {
-        await GamePlayer.create({
-          game_id: this.currentGame.id,
-          user_id: userId,
-          cartela_ids: [luckyNumber],
-          marked_numbers: []
-        });
-      }
-      
-      const winnerAmount = (this.currentGame.prize_pool * 0.81);
-      
-      // Broadcast to ALL players
-      this.io.emit('game-update', {
-        totalPlayers: this.getUniquePlayerCount(),
-        totalCartelas: this.currentGame.total_cartelas,
-        prizePool: this.currentGame.prize_pool,
-        winnerAmount: winnerAmount
+      return;
+    }
+    
+    const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+    if (!cartela) {
+      socket.emit('error', { message: 'Invalid lucky number' });
+      return;
+    }
+    
+    player.cartelaIds.push(luckyNumber);
+    
+    // Ensure prize_pool is treated as number
+    const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
+    this.currentGame.prize_pool = currentPrizePool + 10;
+    this.currentGame.total_cartelas = (this.currentGame.total_cartelas || 0) + 1;
+    this.currentGame.total_players = this.getUniquePlayerCount();
+    await this.currentGame.save();
+    
+    console.log(`[DEBUG] Prize pool: ${currentPrizePool} + 10 = ${this.currentGame.prize_pool}`);
+    
+    // Create or update game player record
+    let gamePlayer = await GamePlayer.findOne({
+      where: { game_id: this.currentGame.id, user_id: userId }
+    });
+    
+    if (gamePlayer) {
+      const updatedCartelas = [...gamePlayer.cartela_ids, luckyNumber];
+      gamePlayer.cartela_ids = updatedCartelas;
+      await gamePlayer.save();
+    } else {
+      await GamePlayer.create({
+        game_id: this.currentGame.id,
+        user_id: userId,
+        cartela_ids: [luckyNumber],
+        marked_numbers: []
       });
-      
-      // Broadcast cartela selected to ALL players (for disabling numbers)
-      this.io.emit('cartela-selected', {
-        luckyNumber,
-        userId,
-        cartelaData: cartela.card_data
-      });
-      
-      socket.emit('cartela-selected-success', {
-        luckyNumber,
-        cartelaData: cartela.card_data,
-        cartelaCount: player.cartelaIds.length,
-        message: `Cartela ${luckyNumber} selected! (${player.cartelaIds.length}/2 cartelas)`
-      });
-      
-	  // After adding cartela, add this debug log
+    }
+    
+    // Calculate winner amount as number
+    const winnerAmount = (parseFloat(this.currentGame.prize_pool) * 0.81);
+    
+    // Broadcast update to ALL players
+    this.io.emit('game-update', {
+      totalPlayers: this.getUniquePlayerCount(),
+      totalCartelas: this.currentGame.total_cartelas,
+      prizePool: parseFloat(this.currentGame.prize_pool),
+      winnerAmount: winnerAmount
+    });
+    
+    this.io.emit('cartela-selected', {
+      luckyNumber,
+      userId,
+      cartelaData: cartela.card_data
+    });
+    
+    socket.emit('cartela-selected-success', {
+      luckyNumber,
+      cartelaData: cartela.card_data,
+      cartelaCount: player.cartelaIds.length,
+      message: `Cartela ${luckyNumber} selected! (${player.cartelaIds.length}/2 cartelas)`
+    });
 console.log(`[PRIZE DEBUG] Prize pool before: ${this.currentGame.prize_pool - 10}, after: ${this.currentGame.prize_pool}`);
 console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 0.81}`);
-	  
-	     } catch (error) {
-      console.error('Select cartela error:', error);
-      socket.emit('error', { message: error.message || 'Failed to select cartela' });
-    }
+    
+  } catch (error) {
+    console.error('Select cartela error:', error);
+    socket.emit('error', { message: error.message || 'Failed to select cartela' });
   }
-
+}
   async handleDeselectCartela(socket, { luckyNumber, userId }) {
-    try {
-      const player = this.players.get(socket.id);
-      if (!player || player.userId !== userId) {
-        socket.emit('error', { message: 'Invalid session' });
-        return;
+  try {
+    const player = this.players.get(socket.id);
+    if (!player || player.userId !== userId) {
+      socket.emit('error', { message: 'Invalid session' });
+      return;
+    }
+    
+    const index = player.cartelaIds.indexOf(luckyNumber);
+    if (index > -1) {
+      player.cartelaIds.splice(index, 1);
+      
+      if (this.currentGame && this.currentGame.id) {
+        const gamePlayer = await GamePlayer.findOne({
+          where: { game_id: this.currentGame.id, user_id: userId }
+        });
+        
+        if (gamePlayer) {
+          const updatedCartelas = gamePlayer.cartela_ids.filter(id => id !== luckyNumber);
+          gamePlayer.cartela_ids = updatedCartelas;
+          await gamePlayer.save();
+          
+          // Ensure prize_pool is treated as number
+          const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
+          this.currentGame.prize_pool = currentPrizePool - 10;
+          this.currentGame.total_cartelas = Math.max(0, (this.currentGame.total_cartelas || 0) - 1);
+          this.currentGame.total_players = this.getUniquePlayerCount();
+          await this.currentGame.save();
+          
+          const winnerAmount = (parseFloat(this.currentGame.prize_pool) * 0.81);
+          
+          this.io.emit('game-update', {
+            totalPlayers: this.getUniquePlayerCount(),
+            totalCartelas: this.currentGame.total_cartelas,
+            prizePool: parseFloat(this.currentGame.prize_pool),
+            winnerAmount: winnerAmount
+          });
+        }
       }
       
-      const index = player.cartelaIds.indexOf(luckyNumber);
-      if (index > -1) {
-        player.cartelaIds.splice(index, 1);
-        
-        if (this.currentGame && this.currentGame.id) {
-          const gamePlayer = await GamePlayer.findOne({
-            where: { game_id: this.currentGame.id, user_id: userId }
-          });
-          
-          if (gamePlayer) {
-            const updatedCartelas = gamePlayer.cartela_ids.filter(id => id !== luckyNumber);
-            gamePlayer.cartela_ids = updatedCartelas;
-            await gamePlayer.save();
-            
-            this.currentGame.prize_pool -= 10;
-            this.currentGame.total_cartelas -= 1;
-            this.currentGame.total_players = this.getUniquePlayerCount();
-            await this.currentGame.save();
-            
-            const winnerAmount = (this.currentGame.prize_pool * 0.81);
-            
-            // Broadcast to ALL players
-            this.io.emit('game-update', {
-              totalPlayers: this.getUniquePlayerCount(),
-              totalCartelas: this.currentGame.total_cartelas,
-              prizePool: this.currentGame.prize_pool,
-              winnerAmount: winnerAmount
-            });
-          }
-        }
-        
-        // Broadcast cartela deselected to ALL players
-        this.io.emit('cartela-deselected', { luckyNumber, userId });
-        socket.emit('cartela-deselected-success', { luckyNumber });
-      }
-    } catch (error) {
-      console.error('Deselect error:', error);
-      socket.emit('error', { message: 'Failed to deselect cartela' });
+      this.io.emit('cartela-deselected', { luckyNumber, userId });
+      socket.emit('cartela-deselected-success', { luckyNumber });
     }
+  } catch (error) {
+    console.error('Deselect error:', error);
+    socket.emit('error', { message: 'Failed to deselect cartela' });
   }
+}
 
   async handleAutoMark(socket, { userId, gameId, number }) {
     try {
@@ -361,27 +366,26 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
   }
 
   async startNewGame() {
-    console.log('Starting new game...');
-    
-    // Clear all players' cartelas for new game
-    this.players.forEach(player => {
-      player.cartelaIds = [];
-    });
-    
-    const gameNumber = await this.getNextGameNumber();
-    this.currentGame = await Game.create({
-      game_number: gameNumber,
-      status: 'waiting',
-      total_players: 0,
-      total_cartelas: 0,
-      prize_pool: 0,
-      commission: 0,
-      called_numbers: []
-    });
-    
-    console.log(`Game #${gameNumber} created`);
-    this.startWaitingPeriod();
-  }
+  console.log('Starting new game...');
+  
+  this.players.forEach(player => {
+    player.cartelaIds = [];
+  });
+  
+  const gameNumber = await this.getNextGameNumber();
+  this.currentGame = await Game.create({
+    game_number: gameNumber,
+    status: 'waiting',
+    total_players: 0,
+    total_cartelas: 0,
+    prize_pool: 0.00,  // Use number, not string
+    commission: 0,
+    called_numbers: []
+  });
+  
+  console.log(`Game #${gameNumber} created with prize pool: 0`);
+  this.startWaitingPeriod();
+}
 
   async startWaitingPeriod() {
     let waitingTime = 35;
