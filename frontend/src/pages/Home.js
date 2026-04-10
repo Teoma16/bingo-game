@@ -256,7 +256,7 @@ const Home = ({ user, setUser }) => {
     
     newSocket.on('cartela-selected-success', (data) => {
       console.log('Cartela selected success:', data);
-      toast.success(`Cartela ${data.luckyNumber} selected!`);
+     // toast.success(`Cartela ${data.luckyNumber} selected!`);
       setSelectedNumbers(prev => [...prev, data.luckyNumber]);
       newSocket.emit('get-game-state');
     });

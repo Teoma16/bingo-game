@@ -16,56 +16,61 @@ const GameRoom = ({ user }) => {
   const [currentNumber, setCurrentNumber] = useState(null);
   const [currentNumberWithLetter, setCurrentNumberWithLetter] = useState(null);
   const [prizePool, setPrizePool] = useState(location.state?.prizePool || 0);
-  const [winnerAmount, setWinnerAmount] = useState(0);
+  const [winnerAmount, setWinnerAmount] = useState(location.state?.winnerAmount || 0);
   const [gameActive, setGameActive] = useState(true);
   const [selectedCartelas, setSelectedCartelas] = useState([]);
   const [markedNumbers, setMarkedNumbers] = useState([]);
   const [autoMark, setAutoMark] = useState(true);
   const [callCount, setCallCount] = useState(0);
   const [gameNumber, setGameNumber] = useState(location.state?.gameNumber || 0);
-  const [currentGameId, setCurrentGameId] = useState(null);
-const [winner, setWinner] = useState(null);
-const [showWinnerModal, setShowWinnerModal] = useState(false);
-const [showConfetti, setShowConfetti] = useState(false);
+  const [currentGameId, setCurrentGameId] = useState(location.state?.gameId || null);
+  const [winner, setWinner] = useState(null);
+  const [showWinnerModal, setShowWinnerModal] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
-
-  // Calculate winner amount (81% of prize pool)
-  useEffect(() => {
-    const calculatedWinnerAmount = prizePool * 0.81;
-    setWinnerAmount(calculatedWinnerAmount);
-  }, [prizePool]);
+  const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
 
   // Load cartelas from location state or localStorage
   useEffect(() => {
+    console.log('=== GAMEROOM LOADING CARTELAS ===');
     console.log('Location state:', location.state);
     
     let cartelas = [];
     
+    // Try to get from location state first
     if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
       cartelas = location.state.selectedCartelas;
-      console.log('Got cartelas from location state:', cartelas);
-    } else {
+      console.log('✅ Got cartelas from location state:', cartelas.length);
+    } 
+    // Try to get from localStorage
+    else {
       const savedCartelas = localStorage.getItem('userCartelas');
       if (savedCartelas) {
         cartelas = JSON.parse(savedCartelas);
-        console.log('Got cartelas from localStorage:', cartelas);
+        console.log('✅ Got cartelas from localStorage:', cartelas.length);
       }
     }
     
     setSelectedCartelas(cartelas);
     
+    // If still no cartelas, fetch from API
     if (cartelas.length === 0 && user?.id) {
+      console.log('⚠️ No cartelas found, fetching from API...');
       fetchUserCartelas();
     }
   }, [location.state, user]);
 
   const fetchUserCartelas = async () => {
     try {
-      const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/game/user-cartelas/${user.id}`);
+      const response = await axios.get(`${API_URL}/api/game/user-cartelas/${user.id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
       console.log('API cartelas response:', response.data);
       if (response.data.cartelas && response.data.cartelas.length > 0) {
         setSelectedCartelas(response.data.cartelas);
         localStorage.setItem('userCartelas', JSON.stringify(response.data.cartelas));
+      } else {
+        console.log('❌ No cartelas from API either');
       }
     } catch (error) {
       console.error('Failed to fetch cartelas:', error);
@@ -82,7 +87,7 @@ const [showConfetti, setShowConfetti] = useState(false);
   };
 
   useEffect(() => {
-    const newSocket = io('https://bingo-game-production-dd0b.up.railway.app');
+    const newSocket = io(API_URL);
     setSocket(newSocket);
     
     if (user && user.id) {
@@ -92,7 +97,6 @@ const [showConfetti, setShowConfetti] = useState(false);
       });
     }
     
-    // Listen for game-started event to get the correct game ID
     newSocket.on('game-started', (data) => {
       console.log('🎮 Game started event received:', data);
       setCurrentGameId(data.gameId);
@@ -113,13 +117,11 @@ const [showConfetti, setShowConfetti] = useState(false);
       setCalledNumbersWithLetters(calledWithLetters);
       setCallCount(data.callCount);
       
-      // Auto-mark the number - use currentGameId from state, not from params
       if (!markedNumbers.includes(data.number)) {
         setMarkedNumbers(prev => [...prev, data.number]);
         
         if (newSocket && newSocket.connected) {
           const gameIdToUse = currentGameId || location.state?.gameId;
-          console.log('📤 Sending auto-mark for number:', data.number, 'with gameId:', gameIdToUse);
           newSocket.emit('auto-mark', {
             userId: user.id,
             gameId: gameIdToUse,
@@ -129,35 +131,29 @@ const [showConfetti, setShowConfetti] = useState(false);
       }
     });
     
-newSocket.on('game-ended', (data) => {
-  console.log('Game ended data:', data);
-  
-  // Show confetti only if current user is the winner
-  if (data.winners && data.winners.length > 0 && data.winners[0].userId === user?.id) {
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 5000);
-  }
-  
-  // Set winner information
-  if (data.winners && data.winners.length > 0) {
-    const winnerData = data.winners[0];
-    setWinner({
-      userId: winnerData.userId,
-	  username: winnerData.username || `Player ${winnerData.userId}`,
-      amount: winnerData.amount,
-      totalAmount: winnerData.totalAmount || winnerData.amount,
-      bonus: winnerData.bonus || 0
+    newSocket.on('game-ended', (data) => {
+      console.log('Game ended data:', data);
+      
+      if (data.winners && data.winners.length > 0 && data.winners[0].userId === user?.id) {
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 5000);
+      }
+      
+      if (data.winners && data.winners.length > 0) {
+        const winnerData = data.winners[0];
+        setWinner({
+          userId: winnerData.userId,
+          username: winnerData.username || `Player ${winnerData.userId}`,
+          amount: winnerData.amount,
+          totalAmount: winnerData.totalAmount || winnerData.amount,
+          bonus: winnerData.bonus || 0
+        });
+        setShowWinnerModal(true);
+      }
+      
+      setGameActive(false);
+      localStorage.removeItem('userCartelas');
     });
-    setShowWinnerModal(true);
-  }
-  
-  setGameActive(false);
-  
-  // Clear stored cartelas
-  localStorage.removeItem('userCartelas');
-  
-  // DO NOT add navigate here - let the useEffect handle it
-});
     
     newSocket.on('invalid-bingo', (data) => {
       toast.error(data.message);
@@ -179,17 +175,18 @@ newSocket.on('game-ended', (data) => {
       if (newSocket) newSocket.disconnect();
     };
   }, [user, navigate, currentGameId, location.state]);
-// Auto redirect after winner modal shows - 5 seconds
-useEffect(() => {
-  if (showWinnerModal) {
-    console.log('Winner modal shown, redirecting in 5 seconds...');
-    const timer = setTimeout(() => {
-      console.log('Redirecting to home...');
-      navigate('/');
-    }, 5000);
-    return () => clearTimeout(timer);
-  }
-}, [showWinnerModal, navigate]);
+
+  useEffect(() => {
+    if (showWinnerModal) {
+      console.log('Winner modal shown, redirecting in 5 seconds...');
+      const timer = setTimeout(() => {
+        console.log('Redirecting to home...');
+        navigate('/');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showWinnerModal, navigate]);
+
   const handlePressBingo = () => {
     if (socket && socket.connected) {
       const gameIdToUse = currentGameId || location.state?.gameId;
@@ -343,11 +340,8 @@ useEffect(() => {
           <div className="winner-prize-display">
             🏆 Winner Gets: {winnerAmount.toFixed(2)} Birr 
           </div>
-		  {/* <div className="commission-display">
-            📊 Commission: {(prizePool * 0.19).toFixed(2)} Birr (19%)
-          </div>*/}
         </div>
-		{/*  <div className="game-controls">
+        <div className="game-controls">
           <button
             className={`mode-toggle ${autoMark ? 'auto' : 'manual'}`}
             onClick={() => setAutoMark(!autoMark)}
@@ -357,7 +351,7 @@ useEffect(() => {
           <button className="bingo-button" onClick={handlePressBingo}>
             🎲 BINGO!
           </button>
-        </div>*/}
+        </div>
       </div>
       
       <div className="game-content">
@@ -393,57 +387,52 @@ useEffect(() => {
           )}
         </div>
       </div>
-	  {/* Fancy Winner Announcement Modal */}
-	  {showConfetti && <Confetti />}
-{showWinnerModal && winner && (
-  <div className="winner-modal-overlay">
-    <div className="winner-modal">
-      <div className="winner-fireworks">
-        <div className="firework"></div>
-        <div className="firework"></div>
-        <div className="firework"></div>
-        <div className="firework"></div>
-        <div className="firework"></div>
-      </div>
       
-      <div className="winner-content">
-        <div className="winner-trophy">🏆</div>
-        <h1 className="winner-title">BINGO!</h1>
-        
-        <div className="winner-announcement">
-          {winner.userId === user?.id ? (
-            <>
-              <p className="winner-congrats">🎉 CONGRATULATIONS! 🎉</p>
-              <p className="winner-message">YOU ARE THE WINNER!</p>
-              <div className="winner-amount">
-                <span className="amount-label">YOU WON</span>
-                <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>
+      {showConfetti && <Confetti />}
+      {showWinnerModal && winner && (
+        <div className="winner-modal-overlay">
+          <div className="winner-modal">
+            <div className="winner-fireworks">
+              <div className="firework"></div>
+              <div className="firework"></div>
+              <div className="firework"></div>
+              <div className="firework"></div>
+              <div className="firework"></div>
+            </div>
+            
+            <div className="winner-content">
+              <div className="winner-trophy">🏆</div>
+              <h1 className="winner-title">BINGO!</h1>
+              
+              <div className="winner-announcement">
+                {winner.userId === user?.id ? (
+                  <>
+                    <p className="winner-congrats">🎉 CONGRATULATIONS! 🎉</p>
+                    <p className="winner-message">YOU ARE THE WINNER!</p>
+                    <div className="winner-amount">
+                      <span className="amount-label">YOU WON</span>
+                      <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="winner-congrats">🎉 BINGO! 🎉</p>
+                    <p className="winner-message">🏆 {winner.username} won the game! 🏆</p>
+                    <div className="winner-amount">
+                      <span className="amount-label">Prize Amount</span>
+                      <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>
+                    </div>
+                  </>
+                )}
               </div>
-              {winner.bonus > 0 && (
-                <div className="winner-bonus">
-                  <span>🎁 + Bonus: {winner.bonus.toFixed(2)} Birr</span>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <p className="winner-congrats">🎉 BINGO! 🎉</p>
-              <p className="winner-message">Player {winner.username} won the game!</p>
-              <div className="winner-amount">
-                <span className="amount-label">Prize Amount</span>
-                <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>
+              
+              <div className="winner-redirect">
+                Redirecting to home in 5 seconds...
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
-        
-        <div className="winner-redirect">
-          Redirecting to home in 5 seconds...
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 };
