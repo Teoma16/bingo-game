@@ -166,7 +166,7 @@
 .bingo-card td.marked {
   background: #00ff00;
   color: #000;
-  text-decoration: line-through;
+ /* text-decoration: line-through;*/
 }
 
 .bingo-card td.free-space {
@@ -224,7 +224,7 @@
 }
 
 .number-cell.called {
-  background: #00ff00;
+  background: #88d6a0;
   color: #000;
   font-weight: bold;
 }
@@ -323,7 +323,7 @@
 
 .bingo-column-full {
   flex: 1;
-  min-width: 60px;
+  max-width: 40px;
   text-align: center;
 }
 
@@ -340,7 +340,7 @@
 .column-numbers-full {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 1px;
   max-height: 400px;
   overflow-y: auto;
 }
@@ -349,15 +349,15 @@
   background: #2a2a2a;
   padding: 6px 4px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   text-align: center;
 }
 
 .bingo-number.called {
-  background: #00ff00;
+  background: #ff7961;
   color: #000;
   font-weight: bold;
-  transform: scale(1.02);
+ 
 }
 
 /* Recent Calls */
