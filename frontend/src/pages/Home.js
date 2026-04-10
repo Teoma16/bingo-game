@@ -240,18 +240,35 @@ const handleWithdraw = async () => {
     }
     
     // Socket event listeners
-    newSocket.on('registered', (data) => {
-      console.log('Registered:', data);
-      setBalance(data.user.wallet_balance);
-    });
+  // Update the registered event handler to receive taken numbers
+newSocket.on('registered', (data) => {
+  console.log('Registered:', data);
+  setBalance(data.user.wallet_balance);
+  // Set initial taken numbers from server
+  if (data.takenNumbers) {
+    setTakenNumbers(data.takenNumbers);
+  }
+  if (data.prizePool) {
+    setWinnerAmount(data.winnerAmount || 0);
+  }
+});
     
-    newSocket.on('game-state', (data) => {
+   /* newSocket.on('game-state', (data) => {
       setGameStatus(data.status);
       // Calculate winner amount (81% of prize pool)
       //const winnerAmt = (data.prizePool || 0) * 0.81;
       setWinnerAmount(data.winnerAmount || 0);
 	  console.log('Game state - Prize pool:', data.prizePool, 'Winner amount:', data.winnerAmount);
-    });
+    });*/
+	// Update game-state event handler
+newSocket.on('game-state', (data) => {
+  setGameStatus(data.status);
+  setWinnerAmount(data.winnerAmount || 0);
+  if (data.takenNumbers) {
+    setTakenNumbers(data.takenNumbers);
+  }
+  console.log('Game state:', data);
+});
     
     newSocket.on('game-waiting', (data) => {
       setGameStatus('waiting');

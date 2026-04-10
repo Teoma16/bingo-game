@@ -36,28 +36,30 @@ const [showConfetti, setShowConfetti] = useState(false);
   }, [prizePool]);
 
   // Load cartelas from location state or localStorage
-  useEffect(() => {
-    console.log('Location state:', location.state);
-    
-    let cartelas = [];
-    
-    if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
-      cartelas = location.state.selectedCartelas;
-      console.log('Got cartelas from location state:', cartelas);
-    } else {
-      const savedCartelas = localStorage.getItem('userCartelas');
-      if (savedCartelas) {
-        cartelas = JSON.parse(savedCartelas);
-        console.log('Got cartelas from localStorage:', cartelas);
-      }
+ // Load cartelas from location state or localStorage
+useEffect(() => {
+  console.log('Location state:', location.state);
+  
+  let cartelas = [];
+  
+  if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
+    cartelas = location.state.selectedCartelas;
+    console.log('Got cartelas from location state:', cartelas.length);
+  } else {
+    const savedCartelas = localStorage.getItem('userCartelas');
+    if (savedCartelas) {
+      cartelas = JSON.parse(savedCartelas);
+      console.log('Got cartelas from localStorage:', cartelas.length);
     }
-    
-    setSelectedCartelas(cartelas);
-    
-    if (cartelas.length === 0 && user?.id) {
-      fetchUserCartelas();
-    }
-  }, [location.state, user]);
+  }
+  
+  setSelectedCartelas(cartelas);
+  
+  // If no cartelas, try to fetch from API
+  if (cartelas.length === 0 && user?.id) {
+    fetchUserCartelas();
+  }
+}, [location.state, user]);
 
   const fetchUserCartelas = async () => {
     try {
