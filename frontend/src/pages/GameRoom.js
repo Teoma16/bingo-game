@@ -37,26 +37,22 @@ const GameRoom = ({ user }) => {
     
     let cartelas = [];
     
-    // Try to get from location state first
     if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
       cartelas = location.state.selectedCartelas;
-      console.log('✅ Got cartelas from location state:', cartelas.length);
-    } 
-    // Try to get from localStorage
-    else {
+      console.log('Got cartelas from location state:', cartelas.length);
+    } else {
       const savedCartelas = localStorage.getItem('userCartelas');
       if (savedCartelas) {
         cartelas = JSON.parse(savedCartelas);
-        console.log('✅ Got cartelas from localStorage:', cartelas.length);
+        console.log('Got cartelas from localStorage:', cartelas.length);
       }
     }
     
     console.log('Final cartelas to display:', cartelas);
     setSelectedCartelas(cartelas);
     
-    // If still no cartelas, try to fetch from API
     if (cartelas.length === 0 && user?.id) {
-      console.log('⚠️ No cartelas found, fetching from API...');
+      console.log('No cartelas found, fetching from API...');
       fetchUserCartelas();
     }
   }, [location.state, user]);
@@ -70,8 +66,6 @@ const GameRoom = ({ user }) => {
       if (response.data.cartelas && response.data.cartelas.length > 0) {
         setSelectedCartelas(response.data.cartelas);
         localStorage.setItem('userCartelas', JSON.stringify(response.data.cartelas));
-      } else {
-        console.log('❌ No cartelas from API either');
       }
     } catch (error) {
       console.error('Failed to fetch cartelas:', error);
@@ -99,7 +93,7 @@ const GameRoom = ({ user }) => {
     }
     
     newSocket.on('game-started', (data) => {
-      console.log('🎮 Game started event received:', data);
+      console.log('Game started event received:', data);
       setCurrentGameId(data.gameId);
       setGameNumber(data.gameNumber);
       setPrizePool(data.prizePool);
@@ -108,7 +102,7 @@ const GameRoom = ({ user }) => {
     });
     
     newSocket.on('number-called', (data) => {
-      console.log('📞 Number called:', data.number);
+      console.log('Number called:', data.number);
       const numberWithLetter = numberToLetter(data.number);
       setCurrentNumber(data.number);
       setCurrentNumberWithLetter(numberWithLetter);
@@ -192,12 +186,12 @@ const GameRoom = ({ user }) => {
   const handlePressBingo = () => {
     if (socket && socket.connected) {
       const gameIdToUse = currentGameId || location.state?.gameId;
-      console.log('🔴 Pressing BINGO with gameId:', gameIdToUse);
+      console.log('Pressing BINGO with gameId:', gameIdToUse);
       socket.emit('press-bingo', {
         userId: user.id,
         gameId: gameIdToUse
       });
-      toast('🎲 BINGO! Checking your cards...');
+      toast('BINGO! Checking your cards...');
     } else {
       toast.error('Connection lost. Please refresh the page.');
     }
@@ -252,10 +246,10 @@ const GameRoom = ({ user }) => {
                       className={`${isMarked ? 'marked' : ''} ${cell === 'FREE' ? 'free-space' : ''}`}
                     >
                       {cell === 'FREE' ? '⭐' : cell}
-                    <td>
+                    </td>
                   );
                 })}
-              </table>
+              </tr>
             ))}
           </tbody>
         </table>
