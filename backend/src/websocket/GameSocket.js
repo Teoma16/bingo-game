@@ -280,7 +280,16 @@ async checkForWinnersManual(userId) {
     });
 console.log(`[PRIZE DEBUG] Prize pool before: ${this.currentGame.prize_pool - 10}, after: ${this.currentGame.prize_pool}`);
 console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 0.81}`);
-    
+ 
+
+// In handleSelectCartela, after finding the cartela:
+console.log(`📋 Cartela ${luckyNumber} numbers:`, {
+  B: cartela.card_data.B,
+  I: cartela.card_data.I,
+  N: cartela.card_data.N,
+  G: cartela.card_data.G,
+  O: cartela.card_data.O
+}); 
   } catch (error) {
     console.error('Select cartela error:', error);
     socket.emit('error', { message: error.message || 'Failed to select cartela' });
@@ -596,6 +605,7 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
     }, 4000);
   }
 
+ 
  async checkForWinners(calledNumber, callCount) {
   console.log(`\n🔍 CHECKING FOR WINNERS - Call #${callCount}: ${calledNumber}`);
   
@@ -604,12 +614,7 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
       where: { game_id: this.currentGame.id }
     });
     
-    console.log(`📊 Total players in game: ${gamePlayers.length}`);
-    
-    if (gamePlayers.length === 0) {
-      console.log('No players found in this game');
-      return;
-    }
+    console.log(`📊 Total players: ${gamePlayers.length}`);
     
     for (const gamePlayer of gamePlayers) {
       let markedNumbers = gamePlayer.marked_numbers || [];
@@ -618,43 +623,130 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
         markedNumbers.push(calledNumber);
         gamePlayer.marked_numbers = markedNumbers;
         await gamePlayer.save();
-        console.log(`✅ Player ${gamePlayer.user_id} - Added ${calledNumber}`);
       }
       
-      console.log(`📝 Player ${gamePlayer.user_id} has ${markedNumbers.length} marked numbers`);
-      console.log(`   Cartelas: ${JSON.stringify(gamePlayer.cartela_ids)}`);
+      console.log(`\n👤 Player ${gamePlayer.user_id} - Marked: ${markedNumbers.length} numbers`);
       
+      // Check each cartela
       for (const luckyNumber of gamePlayer.cartela_ids) {
-        console.log(`   🔍 Checking cartela #${luckyNumber}...`);
-        
         const cartela = await Cartela.findOne({ 
           where: { lucky_number: luckyNumber }
         });
         
-        if (!cartela) {
-          console.log(`   ❌ Cartela #${luckyNumber} not found!`);
-          continue;
+        if (!cartela) continue;
+        
+        // Get all numbers in this cartela (excluding FREE)
+        const cartelaNumbers = [
+          ...cartela.card_data.B,
+          ...cartela.card_data.I,
+          ...cartela.card_data.N,
+          ...cartela.card_data.G,
+          ...cartela.card_data.O
+        ].filter(n => n !== 'FREE');
+        
+        // Check if ALL cartela numbers are in markedNumbers
+        const allNumbersMarked = cartelaNumbers.every(num => markedNumbers.includes(num));
+        
+        if (allNumbersMarked) {
+          console.log(`🏆🏆🏆 FULL CARTELA WINNER! 🏆🏆🏆`);
+          console.log(`   Player: ${gamePlayer.user_id}, Cartela: ${luckyNumber}`);
+          await this.processWin(gamePlayer.user_id);
+          return;
         }
         
-        // Check ALL winning patterns
-        const hasWon = this.checkAllWinPatterns(cartela.card_data, markedNumbers);
-        
-        if (hasWon) {
-          console.log(`🏆🏆🏆 WINNER FOUND! 🏆🏆🏆`);
-          console.log(`   Player: ${gamePlayer.user_id}`);
-          console.log(`   Cartela: ${luckyNumber}`);
-          console.log(`   Call number: ${callCount}`);
+        // Also check for line wins
+        const hasLineWin = this.checkLineWinSimple(cartela.card_data, markedNumbers);
+        if (hasLineWin) {
+          console.log(`🏆🏆🏆 LINE BINGO WINNER! 🏆🏆🏆`);
+          console.log(`   Player: ${gamePlayer.user_id}, Cartela: ${luckyNumber}`);
           await this.processWin(gamePlayer.user_id);
           return;
         }
       }
     }
     
-    console.log(`❌ No winner after call #${callCount}\n`);
+    console.log(`❌ No winner after call #${callCount}`);
   } catch (error) {
     console.error('Error checking winners:', error);
   }
 }
+
+// Simple line win checker
+checkLineWinSimple(cartelaData, markedNumbers) {
+  const grid = [];
+  for (let row = 0; row < 5; row++) {
+    grid.push([
+      cartelaData.B[row],
+      cartelaData.I[row],
+      cartelaData.N[row],
+      cartelaData.G[row],
+      cartelaData.O[row]
+    ]);
+  }
+  
+  const markedSet = new Set(markedNumbers);
+  markedSet.add('FREE');
+  
+  // Check rows
+  for (let row = 0; row < 5; row++) {
+    let rowComplete = true;
+    for (let col = 0; col < 5; col++) {
+      if (!markedSet.has(grid[row][col])) {
+        rowComplete = false;
+        break;
+      }
+    }
+    if (rowComplete) {
+      console.log(`   ✅ Row ${row + 1} complete!`);
+      return true;
+    }
+  }
+  
+  // Check columns
+  for (let col = 0; col < 5; col++) {
+    let colComplete = true;
+    for (let row = 0; row < 5; row++) {
+      if (!markedSet.has(grid[row][col])) {
+        colComplete = false;
+        break;
+      }
+    }
+    if (colComplete) {
+      console.log(`   ✅ Column ${String.fromCharCode(66 + col)} complete!`);
+      return true;
+    }
+  }
+  
+  // Check diagonals
+  let diag1Complete = true;
+  for (let i = 0; i < 5; i++) {
+    if (!markedSet.has(grid[i][i])) {
+      diag1Complete = false;
+      break;
+    }
+  }
+  if (diag1Complete) {
+    console.log(`   ✅ Diagonal TL-BR complete!`);
+    return true;
+  }
+  
+  let diag2Complete = true;
+  for (let i = 0; i < 5; i++) {
+    if (!markedSet.has(grid[i][4 - i])) {
+      diag2Complete = false;
+      break;
+    }
+  }
+  if (diag2Complete) {
+    console.log(`   ✅ Diagonal TR-BL complete!`);
+    return true;
+  }
+  
+  return false;
+}
+ 
+ 
+ 
 
 // Complete winner checker with ALL patterns including Four Corners
 checkAllWinPatterns(cartelaData, markedNumbers) {
