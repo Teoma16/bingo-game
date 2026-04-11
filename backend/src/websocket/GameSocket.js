@@ -366,17 +366,36 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
   }
 }
 
-  async handleAutoMark(socket, { userId, number }) {
-  // Store in memory
-  for (const [sId, player] of this.players) {
-    if (player.userId === userId) {
-      if (!player.markedNumbers) player.markedNumbers = [];
-      if (!player.markedNumbers.includes(number)) {
-        player.markedNumbers.push(number);
-        console.log(`✅ Memory: User ${userId} marked ${number} (${player.markedNumbers.length} total)`);
-      }
-      break;
+async handleAutoMark(socket, { userId, gameId, number }) {
+  // IGNORE the passed gameId - use current active game
+  const activeGameId = this.currentGame?.id;
+  
+  if (!activeGameId) {
+    console.log('No active game');
+    return;
+  }
+  
+  console.log(`Auto-mark: User ${userId}, Game ${activeGameId}, Number ${number}`);
+  
+  try {
+    const gamePlayer = await GamePlayer.findOne({
+      where: { game_id: activeGameId, user_id: userId }
+    });
+    
+    if (!gamePlayer) {
+      console.log(`GamePlayer not found for user ${userId}`);
+      return;
     }
+    
+    let markedNumbers = gamePlayer.marked_numbers || [];
+    if (!markedNumbers.includes(number)) {
+      markedNumbers.push(number);
+      gamePlayer.marked_numbers = markedNumbers;
+      await gamePlayer.save();
+      console.log(`✅ Marked ${number}. Total: ${markedNumbers.length}`);
+    }
+  } catch (error) {
+    console.error('Auto-mark error:', error);
   }
 }
 
@@ -499,6 +518,7 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
   }
 
   async startGame() {
+	   console.log(`🎮 GAME STARTED - Game ID: ${this.currentGame.id}`);
     this.currentGame = await Game.findByPk(this.currentGame.id);
     
     const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
@@ -597,28 +617,39 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
 
  
 async checkForWinners(calledNumber, callCount) {
-  for (const [sId, player] of this.players) {
-    const marked = player.markedNumbers || [];
-    if (marked.length === 0) continue;
+  console.log(`\n🎯 CALL #${callCount}: ${calledNumber}`);
+  
+  try {
+    const gamePlayers = await GamePlayer.findAll({
+      where: { game_id: this.currentGame.id }
+    });
     
-    for (const luckyNum of player.cartelaIds) {
-      const cartela = await Cartela.findOne({ where: { lucky_number: luckyNum } });
-      if (!cartela) continue;
+    for (const gamePlayer of gamePlayers) {
+      let markedNumbers = gamePlayer.marked_numbers || [];
       
-      const allNumbers = [
-        ...cartela.card_data.B, ...cartela.card_data.I,
-        ...cartela.card_data.N, ...cartela.card_data.G,
-        ...cartela.card_data.O
-      ].filter(n => n !== 'FREE');
+      if (!markedNumbers.includes(calledNumber)) {
+        markedNumbers.push(calledNumber);
+        gamePlayer.marked_numbers = markedNumbers;
+        await gamePlayer.save();
+      }
       
-      const hasWon = allNumbers.every(n => marked.includes(n));
-      
-      if (hasWon) {
-        console.log(`🏆 WINNER! User ${player.userId}`);
-        await this.processWin(player.userId);
-        return;
+      for (const luckyNumber of gamePlayer.cartela_ids) {
+        const cartela = await Cartela.findOne({ 
+          where: { lucky_number: luckyNumber }
+        });
+        
+        if (cartela) {
+          const hasWon = this.gameService.checkWinPattern(cartela.card_data, markedNumbers);
+          if (hasWon) {
+            console.log(`🏆 WINNER! Player ${gamePlayer.user_id}`);
+            await this.processWin(gamePlayer.user_id);
+            return;
+          }
+        }
       }
     }
+  } catch (error) {
+    console.error('Error checking winners:', error);
   }
 }
 
