@@ -554,51 +554,217 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
     }, 4000);
   }
 
-  async checkForWinners(calledNumber, callCount) {
-  console.log(`\n🎯 CALL #${callCount}: ${calledNumber}`);
+ async checkForWinners(calledNumber, callCount) {
+  console.log(`\n🔍 CHECKING FOR WINNERS - Call #${callCount}: ${calledNumber}`);
   
   try {
     const gamePlayers = await GamePlayer.findAll({
       where: { game_id: this.currentGame.id }
     });
     
-    console.log(`Total players to check: ${gamePlayers.length}`);
+    console.log(`📊 Total players in game: ${gamePlayers.length}`);
+    
+    if (gamePlayers.length === 0) {
+      console.log('No players found in this game');
+      return;
+    }
     
     for (const gamePlayer of gamePlayers) {
       let markedNumbers = gamePlayer.marked_numbers || [];
       
-      // Add the new called number
       if (!markedNumbers.includes(calledNumber)) {
         markedNumbers.push(calledNumber);
         gamePlayer.marked_numbers = markedNumbers;
         await gamePlayer.save();
         console.log(`✅ Player ${gamePlayer.user_id} - Added ${calledNumber}`);
-        console.log(`   Total marked: ${markedNumbers.length} numbers`);
       }
       
-      // Check each cartela for win
+      console.log(`📝 Player ${gamePlayer.user_id} has ${markedNumbers.length} marked numbers`);
+      console.log(`   Cartelas: ${JSON.stringify(gamePlayer.cartela_ids)}`);
+      
       for (const luckyNumber of gamePlayer.cartela_ids) {
+        console.log(`   🔍 Checking cartela #${luckyNumber}...`);
+        
         const cartela = await Cartela.findOne({ 
           where: { lucky_number: luckyNumber }
         });
         
-        if (cartela) {
-          console.log(`\n--- Checking cartela ${luckyNumber} for player ${gamePlayer.user_id} ---`);
-          const hasWon = this.gameService.checkWinPattern(cartela.card_data, markedNumbers);
-          
-          if (hasWon) {
-            console.log(`🏆🏆🏆 WINNER FOUND! Player ${gamePlayer.user_id} with cartela ${luckyNumber} at call ${callCount}! 🏆🏆🏆`);
-            await this.processWin(gamePlayer.user_id);
-            return;
-          }
+        if (!cartela) {
+          console.log(`   ❌ Cartela #${luckyNumber} not found!`);
+          continue;
+        }
+        
+        // Check ALL winning patterns
+        const hasWon = this.checkAllWinPatterns(cartela.card_data, markedNumbers);
+        
+        if (hasWon) {
+          console.log(`🏆🏆🏆 WINNER FOUND! 🏆🏆🏆`);
+          console.log(`   Player: ${gamePlayer.user_id}`);
+          console.log(`   Cartela: ${luckyNumber}`);
+          console.log(`   Call number: ${callCount}`);
+          await this.processWin(gamePlayer.user_id);
+          return;
         }
       }
     }
     
-    console.log(`No winner yet after ${callCount} calls\n`);
+    console.log(`❌ No winner after call #${callCount}\n`);
   } catch (error) {
     console.error('Error checking winners:', error);
   }
+}
+
+// Complete winner checker with ALL patterns including Four Corners
+checkAllWinPatterns(cartelaData, markedNumbers) {
+  const grid = [];
+  for (let row = 0; row < 5; row++) {
+    grid.push([
+      cartelaData.B[row],
+      cartelaData.I[row],
+      cartelaData.N[row],
+      cartelaData.G[row],
+      cartelaData.O[row]
+    ]);
+  }
+  
+  const markedSet = new Set(markedNumbers);
+  markedSet.add('FREE');
+  
+  // 1. Check Horizontal Lines
+  for (let row = 0; row < 5; row++) {
+    let allMarked = true;
+    for (let col = 0; col < 5; col++) {
+      if (!markedSet.has(grid[row][col])) {
+        allMarked = false;
+        break;
+      }
+    }
+    if (allMarked) {
+      console.log(`   ✅ Horizontal BINGO on row ${row + 1}`);
+      return true;
+    }
+  }
+  
+  // 2. Check Vertical Lines
+  for (let col = 0; col < 5; col++) {
+    let allMarked = true;
+    for (let row = 0; row < 5; row++) {
+      if (!markedSet.has(grid[row][col])) {
+        allMarked = false;
+        break;
+      }
+    }
+    if (allMarked) {
+      const colLetter = ['B', 'I', 'N', 'G', 'O'][col];
+      console.log(`   ✅ Vertical BINGO on column ${colLetter}`);
+      return true;
+    }
+  }
+  
+  // 3. Check Diagonal (Top-Left to Bottom-Right)
+  let diag1 = true;
+  for (let i = 0; i < 5; i++) {
+    if (!markedSet.has(grid[i][i])) {
+      diag1 = false;
+      break;
+    }
+  }
+  if (diag1) {
+    console.log(`   ✅ Diagonal BINGO (TL-BR)`);
+    return true;
+  }
+  
+  // 4. Check Diagonal (Top-Right to Bottom-Left)
+  let diag2 = true;
+  for (let i = 0; i < 5; i++) {
+    if (!markedSet.has(grid[i][4 - i])) {
+      diag2 = false;
+      break;
+    }
+  }
+  if (diag2) {
+    console.log(`   ✅ Diagonal BINGO (TR-BL)`);
+    return true;
+  }
+  
+  // 5. Check Four Corners
+  const corners = [
+    grid[0][0],  // Top-Left
+    grid[0][4],  // Top-Right
+    grid[4][0],  // Bottom-Left
+    grid[4][4]   // Bottom-Right
+  ];
+  
+  let allCornersMarked = true;
+  for (const corner of corners) {
+    if (!markedSet.has(corner)) {
+      allCornersMarked = false;
+      break;
+    }
+  }
+  if (allCornersMarked) {
+    console.log(`   ✅ Four Corners BINGO!`);
+    return true;
+  }
+  
+  // 6. Check 2x2 Squares in Corners
+  // Top-Left 2x2
+  const topLeft2x2 = [grid[0][0], grid[0][1], grid[1][0], grid[1][1]];
+  let topLeftMarked = true;
+  for (const cell of topLeft2x2) {
+    if (!markedSet.has(cell)) {
+      topLeftMarked = false;
+      break;
+    }
+  }
+  if (topLeftMarked) {
+    console.log(`   ✅ 2x2 Square BINGO (Top-Left)`);
+    return true;
+  }
+  
+  // Top-Right 2x2
+  const topRight2x2 = [grid[0][3], grid[0][4], grid[1][3], grid[1][4]];
+  let topRightMarked = true;
+  for (const cell of topRight2x2) {
+    if (!markedSet.has(cell)) {
+      topRightMarked = false;
+      break;
+    }
+  }
+  if (topRightMarked) {
+    console.log(`   ✅ 2x2 Square BINGO (Top-Right)`);
+    return true;
+  }
+  
+  // Bottom-Left 2x2
+  const bottomLeft2x2 = [grid[3][0], grid[3][1], grid[4][0], grid[4][1]];
+  let bottomLeftMarked = true;
+  for (const cell of bottomLeft2x2) {
+    if (!markedSet.has(cell)) {
+      bottomLeftMarked = false;
+      break;
+    }
+  }
+  if (bottomLeftMarked) {
+    console.log(`   ✅ 2x2 Square BINGO (Bottom-Left)`);
+    return true;
+  }
+  
+  // Bottom-Right 2x2
+  const bottomRight2x2 = [grid[3][3], grid[3][4], grid[4][3], grid[4][4]];
+  let bottomRightMarked = true;
+  for (const cell of bottomRight2x2) {
+    if (!markedSet.has(cell)) {
+      bottomRightMarked = false;
+      break;
+    }
+  }
+  if (bottomRightMarked) {
+    console.log(`   ✅ 2x2 Square BINGO (Bottom-Right)`);
+    return true;
+  }
+  
+  return false;
 }
 
   async processWin(winnerId) {
