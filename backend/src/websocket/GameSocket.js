@@ -124,6 +124,7 @@ socket.on('test-mark', async (data) => {
       this.players.set(socket.id, {
         userId: user.id,
         cartelaIds: [],
+		 markedNumbers: [],  // ADD THIS LINE
         socketId: socket.id
       });
       
@@ -368,38 +369,15 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
 
 
 async handleAutoMark(socket, { userId, number }) {
-  // IGNORE the passed gameId - use current active game
-   console.log(`🤖 Auto-mark: User ${userId} marking number ${number}`);
-  const activeGameId = this.currentGame?.id;
-  
-  if (!activeGameId) {
-    console.log('No active game');
-    return;
-  }
-   const gamePlayer = await GamePlayer.findOne({
-    where: { game_id: activeGameId, user_id: userId }
-  });
-  console.log(`Auto-mark: User ${userId}, Game ${activeGameId}, Number ${number}`);
-  
-  try {
-    const gamePlayer = await GamePlayer.findOne({
-      where: { game_id: activeGameId, user_id: userId }
-    });
-    
-    if (!gamePlayer) {
-      console.log(`GamePlayer not found for user ${userId}`);
-      return;
+  // Store in memory only - NO DATABASE
+  for (const [socketId, player] of this.players) {
+    if (player.userId === userId) {
+      if (!player.markedNumbers.includes(number)) {
+        player.markedNumbers.push(number);
+        console.log(`✅ Player ${userId} marked ${number} (${player.markedNumbers.length} total)`);
+      }
+      break;
     }
-    
-    let markedNumbers = gamePlayer.marked_numbers || [];
-    if (!markedNumbers.includes(number)) {
-      markedNumbers.push(number);
-      gamePlayer.marked_numbers = markedNumbers;
-      await gamePlayer.save();
-      console.log(`✅ Marked ${number}. Total: ${markedNumbers.length}`);
-    }
-  } catch (error) {
-    console.error('Auto-mark error:', error);
   }
 }
 
@@ -459,8 +437,10 @@ async handleAutoMark(socket, { userId, number }) {
   async startNewGame() {
   console.log('Starting new game...');
   
+  // Clear ALL player memory
   this.players.forEach(player => {
     player.cartelaIds = [];
+    player.markedNumbers = [];
   });
   
   const gameNumber = await this.getNextGameNumber();
@@ -469,12 +449,12 @@ async handleAutoMark(socket, { userId, number }) {
     status: 'waiting',
     total_players: 0,
     total_cartelas: 0,
-    prize_pool: 0.00,  // Use number, not string
+    prize_pool: 0,
     commission: 0,
     called_numbers: []
   });
   
-  console.log(`Game #${gameNumber} created with prize pool: 0`);
+  console.log(`Game #${gameNumber} created`);
   this.startWaitingPeriod();
 }
 
@@ -621,40 +601,41 @@ async handleAutoMark(socket, { userId, number }) {
 
  
 async checkForWinners(calledNumber, callCount) {
-  console.log(`\n🎯 CALL #${callCount}: ${calledNumber}`);
+  console.log(`\n🎯 Checking winner after call #${callCount}: ${calledNumber}`);
   
-  try {
-    const gamePlayers = await GamePlayer.findAll({
-      where: { game_id: this.currentGame.id }
-    });
+  // Check each player's memory
+  for (const [socketId, player] of this.players) {
+    const marked = player.markedNumbers || [];
+    if (marked.length === 0) continue;
     
-    for (const gamePlayer of gamePlayers) {
-      let markedNumbers = gamePlayer.marked_numbers || [];
+    console.log(`Player ${player.userId} has ${marked.length} marked numbers`);
+    
+    // Check each cartela this player owns
+    for (const luckyNumber of player.cartelaIds) {
+      const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+      if (!cartela) continue;
       
-      if (!markedNumbers.includes(calledNumber)) {
-        markedNumbers.push(calledNumber);
-        gamePlayer.marked_numbers = markedNumbers;
-        await gamePlayer.save();
-      }
+      // Get all numbers in this cartela (24 numbers, FREE excluded)
+      const allNumbers = [
+        ...cartela.card_data.B,
+        ...cartela.card_data.I,
+        ...cartela.card_data.N,
+        ...cartela.card_data.G,
+        ...cartela.card_data.O
+      ].filter(n => n !== 'FREE');
       
-      for (const luckyNumber of gamePlayer.cartela_ids) {
-        const cartela = await Cartela.findOne({ 
-          where: { lucky_number: luckyNumber }
-        });
-        
-        if (cartela) {
-          const hasWon = this.gameService.checkWinPattern(cartela.card_data, markedNumbers);
-          if (hasWon) {
-            console.log(`🏆 WINNER! Player ${gamePlayer.user_id}`);
-            await this.processWin(gamePlayer.user_id);
-            return;
-          }
-        }
+      // WINNER CHECK - if all numbers are marked
+      const hasWon = allNumbers.every(num => marked.includes(num));
+      
+      if (hasWon) {
+        console.log(`🏆🏆🏆 WINNER! Player ${player.userId} with cartela ${luckyNumber}`);
+        await this.processWin(player.userId);
+        return;
       }
     }
-  } catch (error) {
-    console.error('Error checking winners:', error);
   }
+  
+  console.log(`❌ No winner yet`);
 }
 
 // Simple line win checker
@@ -888,69 +869,49 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
 }
 
   async processWin(winnerId) {
-    console.log(`\n========== PROCESSING WINNER ==========`);
-    console.log(`Winner ID: ${winnerId}`);
-    
-    if (this.gameInterval) {
-      clearInterval(this.gameInterval);
-      this.gameInterval = null;
-    }
-    
-    const prizePoolNum = parseFloat(this.currentGame.prize_pool) || 0;
-    const totalPrize = (prizePoolNum * 81) / 100;
-    const roundedPrize = Math.round(totalPrize * 100) / 100;
-    
-    const user = await User.findByPk(winnerId);
-    const winnerName = user?.username || user?.phone_number || `Player ${winnerId}`;
-    
-    if (user) {
-      const oldBalance = parseFloat(user.wallet_balance) || 0;
-      const newBalance = oldBalance + roundedPrize;
-      
-      user.wallet_balance = newBalance;
-      user.total_won = (user.total_won || 0) + 1;
-      await user.save();
-      
-      await Transaction.create({
-        user_id: winnerId,
-        type: 'prize',
-        amount: roundedPrize,
-        balance_after: newBalance,
-        status: 'completed',
-        description: `Won ${roundedPrize} Birr from game #${this.currentGame.game_number}`
-      });
-    }
-    
-    await GamePlayer.update(
-      { is_winner: true, prize_amount: roundedPrize },
-      { where: { game_id: this.currentGame.id, user_id: winnerId } }
-    );
-    
-    this.currentGame.status = 'completed';
-    this.currentGame.winner_ids = [winnerId];
-    this.currentGame.winner_amount = roundedPrize;
-    this.currentGame.end_time = new Date();
-    await this.currentGame.save();
-    
-    this.io.emit('game-ended', {
-      winners: [{ 
-        userId: winnerId, 
-        username: winnerName,
-        amount: roundedPrize 
-      }],
-      prizeAmount: roundedPrize,
-      message: `🎉 BINGO! ${winnerName} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
-    });
-    
-    // Clear all player cartelas for next game
-    this.players.forEach(player => {
-      player.cartelaIds = [];
-    });
-    
-    setTimeout(() => {
-      this.startNewGame();
-    }, 5000);
+  console.log(`\n🏆 PROCESSING WINNER: ${winnerId}`);
+  
+  // Stop the game
+  if (this.gameInterval) {
+    clearInterval(this.gameInterval);
+    this.gameInterval = null;
   }
+  
+  // Calculate prize
+  const prizePoolNum = parseFloat(this.currentGame.prize_pool) || 0;
+  const totalPrize = (prizePoolNum * 81) / 100;
+  const roundedPrize = Math.round(totalPrize * 100) / 100;
+  
+  // Credit winner in database
+  const user = await User.findByPk(winnerId);
+  if (user) {
+    user.wallet_balance = parseFloat(user.wallet_balance) + roundedPrize;
+    user.total_won += 1;
+    await user.save();
+  }
+  
+  // Mark game as completed
+  this.currentGame.status = 'completed';
+  this.currentGame.winner_ids = [winnerId];
+  this.currentGame.winner_amount = roundedPrize;
+  this.currentGame.end_time = new Date();
+  await this.currentGame.save();
+  
+  // Announce winner
+  this.io.emit('game-ended', {
+    winners: [{ userId: winnerId, amount: roundedPrize }],
+    prizeAmount: roundedPrize,
+    message: `🎉 BINGO! Winner wins ${roundedPrize} Birr! 🎉`
+  });
+  
+  // Clear all player memory
+  this.players.clear();
+  
+  // Start new game
+  setTimeout(() => {
+    this.startNewGame();
+  }, 5000);
+}
 
   getUniquePlayerCount() {
     const uniqueUsers = new Set();
