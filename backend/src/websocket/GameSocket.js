@@ -53,7 +53,10 @@ class GameSocket {
         this.handleDisconnect(socket);
       });
     });
-    
+    socket.on('force-check-winner', async (data) => {
+  console.log('🔴 FORCE WINNER CHECK requested by user:', data.userId);
+  await this.checkForWinnersManual(data.userId);
+});
     this.startNewGame();
   }
 
@@ -124,7 +127,46 @@ class GameSocket {
       socket.emit('error', { message: 'Registration failed' });
     }
   }
-
+async checkForWinnersManual(userId) {
+  console.log(`\n🔍 MANUAL WINNER CHECK for user ${userId}`);
+  
+  const gamePlayer = await GamePlayer.findOne({
+    where: { game_id: this.currentGame.id, user_id: userId }
+  });
+  
+  if (!gamePlayer) {
+    console.log('❌ GamePlayer not found');
+    return;
+  }
+  
+  const markedNumbers = gamePlayer.marked_numbers || [];
+  console.log(`📝 Marked numbers (${markedNumbers.length}):`, markedNumbers);
+  
+  for (const luckyNumber of gamePlayer.cartela_ids) {
+    const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+    if (cartela) {
+      const hasWon = this.gameService.checkWinPattern(cartela.card_data, markedNumbers);
+      console.log(`Cartela ${luckyNumber}: ${hasWon ? '✅ WINNER!' : '❌ Not winner'}`);
+      
+      // Also log missing numbers for debugging
+      const allNumbers = [
+        ...cartela.card_data.B,
+        ...cartela.card_data.I,
+        ...cartela.card_data.N,
+        ...cartela.card_data.G,
+        ...cartela.card_data.O
+      ].filter(n => n !== 'FREE');
+      const missing = allNumbers.filter(n => !markedNumbers.includes(n));
+      console.log(`   Missing numbers (${missing.length}):`, missing);
+      
+      if (hasWon) {
+        console.log('🏆 FORCE DECLARING WINNER!');
+        await this.processWin(userId);
+        return;
+      }
+    }
+  }
+}
   async handleSelectCartela(socket, { luckyNumber, userId }) {
   try {
     const player = this.players.get(socket.id);
