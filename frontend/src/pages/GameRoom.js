@@ -221,7 +221,10 @@ const GameRoom = ({ user }) => {
     }
     
     const grid = convertToGrid(cartela.card_data);
-    
+ const gameIdToUse = currentGameId || location.state?.gameId;
+console.log('📤 Sending auto-mark with gameId:', gameIdToUse);
+console.log('   currentGameId state:', currentGameId);
+console.log('   location.state?.gameId:', location.state?.gameId);   
     return (
       <div key={index} className="game-cartela">
         <h4>Cartela #{cartela.lucky_number}</h4>
