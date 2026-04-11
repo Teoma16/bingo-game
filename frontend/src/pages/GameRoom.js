@@ -116,13 +116,11 @@ const GameRoom = ({ user }) => {
         setMarkedNumbers(prev => [...prev, data.number]);
         
         if (newSocket && newSocket.connected) {
-          const gameIdToUse = currentGameId || location.state?.gameId;
-          newSocket.emit('auto-mark', {
-            userId: user.id,
-            gameId: gameIdToUse,
-            number: data.number
-          });
-        }
+  newSocket.emit('auto-mark', {
+    userId: user.id,
+    number: data.number
+  });
+}
       }
     });
     

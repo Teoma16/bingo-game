@@ -366,15 +366,19 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
   }
 }
 
-async handleAutoMark(socket, { userId, gameId, number }) {
+
+async handleAutoMark(socket, { userId, number }) {
   // IGNORE the passed gameId - use current active game
+   console.log(`🤖 Auto-mark: User ${userId} marking number ${number}`);
   const activeGameId = this.currentGame?.id;
   
   if (!activeGameId) {
     console.log('No active game');
     return;
   }
-  
+   const gamePlayer = await GamePlayer.findOne({
+    where: { game_id: activeGameId, user_id: userId }
+  });
   console.log(`Auto-mark: User ${userId}, Game ${activeGameId}, Number ${number}`);
   
   try {
