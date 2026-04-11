@@ -282,14 +282,7 @@ console.log(`[PRIZE DEBUG] Prize pool before: ${this.currentGame.prize_pool - 10
 console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 0.81}`);
  
 
-// In handleSelectCartela, after finding the cartela:
-console.log(`📋 Cartela ${luckyNumber} numbers:`, {
-  B: cartela.card_data.B,
-  I: cartela.card_data.I,
-  N: cartela.card_data.N,
-  G: cartela.card_data.G,
-  O: cartela.card_data.O
-}); 
+ 
   } catch (error) {
     console.error('Select cartela error:', error);
     socket.emit('error', { message: error.message || 'Failed to select cartela' });
@@ -344,32 +337,32 @@ console.log(`📋 Cartela ${luckyNumber} numbers:`, {
   }
 }
 
-  async handleAutoMark(socket, { userId, gameId, number }) {
+  async handleAutoMark(socket, { userId, number }) {
   console.log(`🤖 Auto-mark: User ${userId} marking number ${number}`);
-  console.log(`   Received gameId: ${gameId}, Current game ID: ${this.currentGame?.id}`);
   
   try {
-    // First, try to find by the provided gameId
-    let gamePlayer = await GamePlayer.findOne({
-      where: { game_id: gameId, user_id: userId }
-    });
+    // DON'T use the passed gameId - use the current active game
+    const activeGameId = this.currentGame?.id;
     
-    // If not found, try with current active game
-    if (!gamePlayer && this.currentGame) {
-      console.log(`   GamePlayer not found with gameId ${gameId}, trying current game ${this.currentGame.id}`);
-      gamePlayer = await GamePlayer.findOne({
-        where: { game_id: this.currentGame.id, user_id: userId }
-      });
-    }
-    
-    // If still not found, try to find any game player for this user
-    if (!gamePlayer) {
-      console.log(`   No GamePlayer found for user ${userId} in any game`);
-      console.log(`   This might happen if player hasn't selected any cartelas`);
+    if (!activeGameId) {
+      console.log(`❌ No active game found`);
       return;
     }
     
-    console.log(`   Found GamePlayer with game_id: ${gamePlayer.game_id}`);
+    console.log(`   Looking for game_id: ${activeGameId}, user_id: ${userId}`);
+    
+    const gamePlayer = await GamePlayer.findOne({
+      where: { 
+        game_id: activeGameId, 
+        user_id: userId 
+      }
+    });
+    
+    if (!gamePlayer) {
+      console.log(`❌ GamePlayer NOT found!`);
+      console.log(`   Check if player selected cartelas for this game`);
+      return;
+    }
     
     let markedNumbers = gamePlayer.marked_numbers || [];
     console.log(`   Current marked count: ${markedNumbers.length}`);
@@ -378,12 +371,7 @@ console.log(`📋 Cartela ${luckyNumber} numbers:`, {
       markedNumbers.push(number);
       gamePlayer.marked_numbers = markedNumbers;
       await gamePlayer.save();
-      console.log(`   ✅ Auto-marked ${number}. Total now: ${markedNumbers.length}`);
-      
-      // Optional: Send confirmation back to frontend
-      socket.emit('auto-mark-confirmed', { number, total: markedNumbers.length });
-    } else {
-      console.log(`   ⏭️ Number ${number} already marked`);
+      console.log(`   ✅ Marked ${number}. Total now: ${markedNumbers.length}`);
     }
   } catch (error) {
     console.error('Auto-mark error:', error);

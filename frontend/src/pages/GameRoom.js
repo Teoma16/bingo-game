@@ -119,7 +119,7 @@ const GameRoom = ({ user }) => {
           const gameIdToUse = currentGameId || location.state?.gameId;
           newSocket.emit('auto-mark', {
             userId: user.id,
-            gameId: gameIdToUse,
+            //gameId: gameIdToUse,
             number: data.number
           });
         }
