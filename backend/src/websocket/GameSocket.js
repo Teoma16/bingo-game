@@ -48,14 +48,14 @@ class GameSocket {
       socket.on('get-game-state', async () => {
         await this.sendGameState(socket);
       });
-      
+          socket.on('force-check-winner', async (data) => {
+  console.log('🔴 FORCE WINNER CHECK requested by user:', data.userId);
+  await this.checkForWinnersManual(data.userId);
       socket.on('disconnect', () => {
         this.handleDisconnect(socket);
       });
     });
-    socket.on('force-check-winner', async (data) => {
-  console.log('🔴 FORCE WINNER CHECK requested by user:', data.userId);
-  await this.checkForWinnersManual(data.userId);
+
 });
     this.startNewGame();
   }
