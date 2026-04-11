@@ -48,6 +48,28 @@ class GameSocket {
       socket.on('get-game-state', async () => {
         await this.sendGameState(socket);
       });
+	  // Add this test endpoint
+socket.on('test-mark', async (data) => {
+  console.log('🧪 TEST MARK:', data);
+  const { userId, number } = data;
+  
+  const gamePlayer = await GamePlayer.findOne({
+    where: { game_id: this.currentGame.id, user_id: userId }
+  });
+  
+  if (gamePlayer) {
+    let marked = gamePlayer.marked_numbers || [];
+    if (!marked.includes(number)) {
+      marked.push(number);
+      gamePlayer.marked_numbers = marked;
+      await gamePlayer.save();
+      console.log(`✅ TEST: Marked ${number} for user ${userId}`);
+      socket.emit('test-result', { success: true, number });
+    }
+  } else {
+    console.log(`❌ TEST: No game player for user ${userId}`);
+  }
+});
           socket.on('force-check-winner', async (data) => {
   console.log('🔴 FORCE WINNER CHECK requested by user:', data.userId);
   await this.checkForWinnersManual(data.userId);
@@ -105,6 +127,13 @@ class GameSocket {
         socketId: socket.id
       });
       
+	  
+	  this.players.set(socket.id, {
+  userId: user.id,
+  cartelaIds: [],
+  markedNumbers: [],  // Add this line
+  socketId: socket.id
+});
       // Send current game state with taken numbers
       const winnerAmount = (this.currentGame?.prize_pool || 0) * 0.81;
       const takenNumbers = this.getAllTakenNumbers();
@@ -338,43 +367,16 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
 }
 
   async handleAutoMark(socket, { userId, number }) {
-  console.log(`🤖 Auto-mark: User ${userId} marking number ${number}`);
-  
-  try {
-    // DON'T use the passed gameId - use the current active game
-    const activeGameId = this.currentGame?.id;
-    
-    if (!activeGameId) {
-      console.log(`❌ No active game found`);
-      return;
-    }
-    
-    console.log(`   Looking for game_id: ${activeGameId}, user_id: ${userId}`);
-    
-    const gamePlayer = await GamePlayer.findOne({
-      where: { 
-        game_id: activeGameId, 
-        user_id: userId 
+  // Store in memory
+  for (const [sId, player] of this.players) {
+    if (player.userId === userId) {
+      if (!player.markedNumbers) player.markedNumbers = [];
+      if (!player.markedNumbers.includes(number)) {
+        player.markedNumbers.push(number);
+        console.log(`✅ Memory: User ${userId} marked ${number} (${player.markedNumbers.length} total)`);
       }
-    });
-    
-    if (!gamePlayer) {
-      console.log(`❌ GamePlayer NOT found!`);
-      console.log(`   Check if player selected cartelas for this game`);
-      return;
+      break;
     }
-    
-    let markedNumbers = gamePlayer.marked_numbers || [];
-    console.log(`   Current marked count: ${markedNumbers.length}`);
-    
-    if (!markedNumbers.includes(number)) {
-      markedNumbers.push(number);
-      gamePlayer.marked_numbers = markedNumbers;
-      await gamePlayer.save();
-      console.log(`   ✅ Marked ${number}. Total now: ${markedNumbers.length}`);
-    }
-  } catch (error) {
-    console.error('Auto-mark error:', error);
   }
 }
 
@@ -594,68 +596,29 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
   }
 
  
- async checkForWinners(calledNumber, callCount) {
-  console.log(`\n🔍 CHECKING FOR WINNERS - Call #${callCount}: ${calledNumber}`);
-  
-  try {
-    const gamePlayers = await GamePlayer.findAll({
-      where: { game_id: this.currentGame.id }
-    });
+async checkForWinners(calledNumber, callCount) {
+  for (const [sId, player] of this.players) {
+    const marked = player.markedNumbers || [];
+    if (marked.length === 0) continue;
     
-    console.log(`📊 Total players: ${gamePlayers.length}`);
-    
-    for (const gamePlayer of gamePlayers) {
-      let markedNumbers = gamePlayer.marked_numbers || [];
+    for (const luckyNum of player.cartelaIds) {
+      const cartela = await Cartela.findOne({ where: { lucky_number: luckyNum } });
+      if (!cartela) continue;
       
-      if (!markedNumbers.includes(calledNumber)) {
-        markedNumbers.push(calledNumber);
-        gamePlayer.marked_numbers = markedNumbers;
-        await gamePlayer.save();
-      }
+      const allNumbers = [
+        ...cartela.card_data.B, ...cartela.card_data.I,
+        ...cartela.card_data.N, ...cartela.card_data.G,
+        ...cartela.card_data.O
+      ].filter(n => n !== 'FREE');
       
-      console.log(`\n👤 Player ${gamePlayer.user_id} - Marked: ${markedNumbers.length} numbers`);
+      const hasWon = allNumbers.every(n => marked.includes(n));
       
-      // Check each cartela
-      for (const luckyNumber of gamePlayer.cartela_ids) {
-        const cartela = await Cartela.findOne({ 
-          where: { lucky_number: luckyNumber }
-        });
-        
-        if (!cartela) continue;
-        
-        // Get all numbers in this cartela (excluding FREE)
-        const cartelaNumbers = [
-          ...cartela.card_data.B,
-          ...cartela.card_data.I,
-          ...cartela.card_data.N,
-          ...cartela.card_data.G,
-          ...cartela.card_data.O
-        ].filter(n => n !== 'FREE');
-        
-        // Check if ALL cartela numbers are in markedNumbers
-        const allNumbersMarked = cartelaNumbers.every(num => markedNumbers.includes(num));
-        
-        if (allNumbersMarked) {
-          console.log(`🏆🏆🏆 FULL CARTELA WINNER! 🏆🏆🏆`);
-          console.log(`   Player: ${gamePlayer.user_id}, Cartela: ${luckyNumber}`);
-          await this.processWin(gamePlayer.user_id);
-          return;
-        }
-        
-        // Also check for line wins
-        const hasLineWin = this.checkLineWinSimple(cartela.card_data, markedNumbers);
-        if (hasLineWin) {
-          console.log(`🏆🏆🏆 LINE BINGO WINNER! 🏆🏆🏆`);
-          console.log(`   Player: ${gamePlayer.user_id}, Cartela: ${luckyNumber}`);
-          await this.processWin(gamePlayer.user_id);
-          return;
-        }
+      if (hasWon) {
+        console.log(`🏆 WINNER! User ${player.userId}`);
+        await this.processWin(player.userId);
+        return;
       }
     }
-    
-    console.log(`❌ No winner after call #${callCount}`);
-  } catch (error) {
-    console.error('Error checking winners:', error);
   }
 }
 

@@ -341,7 +341,7 @@ console.log('   location.state?.gameId:', location.state?.gameId);
           </div>
         </div>
         <div className="game-controls">
-          <button
+		{/* <button
             className={`mode-toggle ${autoMark ? 'auto' : 'manual'}`}
             onClick={() => setAutoMark(!autoMark)}
           >
@@ -349,7 +349,12 @@ console.log('   location.state?.gameId:', location.state?.gameId);
           </button>
           <button className="bingo-button" onClick={handlePressBingo}>
             🎲 BINGO!
-          </button>
+</button>*/}
+		  <button onClick={() => {
+  socket.emit('test-mark', { userId: user.id, number: 1 });
+}}>
+  TEST MARK NUMBER 1
+</button>
         </div>
       </div>
       
