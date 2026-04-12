@@ -58,6 +58,20 @@ class GameSocket {
         console.log('❌ Client disconnected:', socket.id);
         this.handleDisconnect(socket);
       });
+	  
+	  
+	  
+	  socket.on('get-marked-numbers', async (data) => {
+  for (const [sId, player] of this.players) {
+    if (player.userId === data.userId) {
+      console.log(`📊 Server marked numbers for user ${data.userId}:`, player.markedNumbers);
+      socket.emit('debug-marked', { marked: player.markedNumbers });
+      break;
+    }
+  }
+});
+
+
     });
     
     this.startNewGame();
@@ -218,19 +232,30 @@ class GameSocket {
       socket.emit('cartela-deselected-success', { luckyNumber });
     }
   }
-
-  async handleAutoMark(socket, { userId, number }) {
-    // Store in memory
-    for (const [socketId, player] of this.players) {
-      if (player.userId === userId) {
-        if (!player.markedNumbers.includes(number)) {
-          player.markedNumbers.push(number);
-          console.log(`📌 Player ${userId} marked ${number} (${player.markedNumbers.length} total)`);
-        }
-        break;
+async handleAutoMark(socket, { userId, number }) {
+  console.log(`🤖 AUTO-MARK received: User ${userId}, Number ${number}`);
+  
+  let found = false;
+  for (const [socketId, player] of this.players) {
+    if (player.userId === userId) {
+      if (!player.markedNumbers) {
+        player.markedNumbers = [];
       }
+      if (!player.markedNumbers.includes(number)) {
+        player.markedNumbers.push(number);
+        console.log(`✅ Stored in memory: User ${userId} now has ${player.markedNumbers.length} marked numbers`);
+      } else {
+        console.log(`⚠️ Number ${number} already marked for user ${userId}`);
+      }
+      found = true;
+      break;
     }
   }
+  
+  if (!found) {
+    console.log(`❌ User ${userId} not found in players map`);
+  }
+}
 
   async checkForWinners() {
     for (const [socketId, player] of this.players) {

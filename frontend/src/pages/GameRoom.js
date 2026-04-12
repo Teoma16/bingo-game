@@ -103,28 +103,33 @@ const GameRoom = ({ user }) => {
       toast.success(data.message);
     });
     
-    newSocket.on('number-called', (data) => {
-      console.log('Number called:', data.number);
-      const numberWithLetter = numberToLetter(data.number);
-      setCurrentNumber(data.number);
-      setCurrentNumberWithLetter(numberWithLetter);
-      setCalledNumbers(data.calledNumbers);
-      
-      const calledWithLetters = data.calledNumbers.map(num => numberToLetter(num));
-      setCalledNumbersWithLetters(calledWithLetters);
-      setCallCount(data.callCount);
-      
-      if (!markedNumbers.includes(data.number)) {
-        setMarkedNumbers(prev => [...prev, data.number]);
-        
-        if (newSocket && newSocket.connected) {
-  newSocket.emit('auto-mark', {
-    userId: user.id,
-    number: data.number
-  });
-}
-      }
+ newSocket.on('number-called', (data) => {
+  console.log('📞 NUMBER CALLED:', data.number);
+  
+  // CRITICAL: Mark the number immediately
+  if (!markedNumbers.includes(data.number)) {
+    setMarkedNumbers(prev => {
+      const newMarked = [...prev, data.number];
+      console.log(`✅ Marked ${data.number}. Total marked: ${newMarked.length}`);
+      return newMarked;
     });
+    
+    // Send to server
+    if (newSocket && newSocket.connected) {
+      newSocket.emit('auto-mark', {
+        userId: user.id,
+        number: data.number
+      });
+    }
+  }
+  
+  // Update UI
+  const numberWithLetter = numberToLetter(data.number);
+  setCurrentNumber(data.number);
+  setCurrentNumberWithLetter(numberWithLetter);
+  setCalledNumbers(data.calledNumbers);
+  setCallCount(data.callCount);
+});
     
     newSocket.on('game-ended', (data) => {
       console.log('Game ended data:', data);
@@ -354,6 +359,16 @@ console.log('   location.state?.gameId:', location.state?.gameId);
   socket.emit('test-mark', { userId: user.id, number: 1 });
 }}>
   TEST MARK NUMBER 1
+</button>
+<button 
+  onClick={() => {
+    console.log('🔍 CURRENT MARKED NUMBERS:', markedNumbers);
+    console.log('Total marked:', markedNumbers.length);
+    socket.emit('get-marked-numbers', { userId: user.id });
+  }}
+  style={{background: 'blue', color: 'white', padding: '10px', margin: '5px'}}
+>
+  🔍 SHOW MARKED NUMBERS
 </button>
         </div>
       </div>
