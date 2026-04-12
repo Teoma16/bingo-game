@@ -305,20 +305,17 @@ newSocket.on('game-state', (data) => {
     });
     
   // In your game-started event listener
-// In your game-started event listener
 newSocket.on('game-started', (data) => {
-  console.log('Game started! Prize pool:', data.prizePool);
-  console.log('Selected cartelas before navigate:', selectedCartelas);
+  console.log('🎮 GAME STARTED - Sending cartelas to GameRoom');
+  console.log('Selected cartelas:', selectedCartelas);
+  console.log('Selected numbers:', selectedNumbers);
   
-  // Calculate winner amount from prize pool
-  const winnerAmt = (data.prizePool || 0) * 0.81;
-  
-  // Make sure cartelas are saved to localStorage before navigating
+  // CRITICAL: Save cartelas to localStorage before navigating
   if (selectedCartelas.length > 0) {
     localStorage.setItem('userCartelas', JSON.stringify(selectedCartelas));
   }
   
-  toast.success(data.message);
+  const winnerAmt = (data.prizePool || 0) * 0.81;
   
   navigate(`/game/${user.id}`, { 
     state: { 
@@ -326,7 +323,8 @@ newSocket.on('game-started', (data) => {
       gameNumber: data.gameNumber,
       prizePool: data.prizePool,
       winnerAmount: winnerAmt,
-      selectedCartelas: selectedCartelas 
+      selectedCartelas: selectedCartelas,
+      selectedNumbers: selectedNumbers
     } 
   });
 });

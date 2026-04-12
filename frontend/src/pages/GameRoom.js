@@ -31,31 +31,40 @@ const GameRoom = ({ user }) => {
   const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
 
   // Load cartelas from location state or localStorage
-  useEffect(() => {
-    console.log('=== GAMEROOM LOADING CARTELAS ===');
-    console.log('Location state:', location.state);
-    
-    let cartelas = [];
-    
-    if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
-      cartelas = location.state.selectedCartelas;
-      console.log('Got cartelas from location state:', cartelas.length);
-    } else {
-      const savedCartelas = localStorage.getItem('userCartelas');
-      if (savedCartelas) {
-        cartelas = JSON.parse(savedCartelas);
-        console.log('Got cartelas from localStorage:', cartelas.length);
+ // Load cartelas from location state or localStorage
+useEffect(() => {
+  console.log('=== GAMEROOM LOADING CARTELAS ===');
+  console.log('Location state:', location.state);
+  
+  let cartelas = [];
+  
+  // FIRST: Try location state
+  if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
+    cartelas = location.state.selectedCartelas;
+    console.log('✅ Got cartelas from location state:', cartelas.length);
+  } 
+  // SECOND: Try localStorage
+  else {
+    const savedCartelas = localStorage.getItem('userCartelas');
+    if (savedCartelas) {
+      cartelas = JSON.parse(savedCartelas);
+      console.log('✅ Got cartelas from localStorage:', cartelas.length);
+      // Also update location state for consistency
+      if (location.state) {
+        location.state.selectedCartelas = cartelas;
       }
     }
-    
-    console.log('Final cartelas to display:', cartelas);
+  }
+  
+  // THIRD: Try to get from API if still empty
+  if (cartelas.length === 0 && user?.id) {
+    console.log('⚠️ No cartelas found, fetching from API...');
+    fetchUserCartelas();
+  } else {
     setSelectedCartelas(cartelas);
-    
-    if (cartelas.length === 0 && user?.id) {
-      console.log('No cartelas found, fetching from API...');
-      fetchUserCartelas();
-    }
-  }, [location.state, user]);
+    console.log('📋 Setting cartelas in state:', cartelas.length);
+  }
+}, [location.state, user]);
 
   const fetchUserCartelas = async () => {
     try {
@@ -359,6 +368,17 @@ console.log('   location.state?.gameId:', location.state?.gameId);
   socket.emit('test-mark', { userId: user.id, number: 1 });
 }}>
   TEST MARK NUMBER 1
+</button>
+<button 
+  onClick={() => {
+    console.log('=== DEBUG CARTELAS ===');
+    console.log('location.state:', location.state);
+    console.log('selectedCartelas state:', selectedCartelas);
+    console.log('localStorage:', localStorage.getItem('userCartelas'));
+  }}
+  style={{background: 'gray', padding: '10px', margin: '5px'}}
+>
+  🔍 DEBUG CARTELAS
 </button>
 <button 
   onClick={() => {
