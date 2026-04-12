@@ -50,6 +50,27 @@ class GameSocket {
         await this.sendGameState(socket);
       });
       
+	  
+	  socket.on('force-winner-check', async (data) => {
+  console.log('🔴 FORCE WINNER CHECK RECEIVED');
+  console.log('   User:', data.userId);
+  console.log('   GameId:', data.gameId);
+  console.log('   Marked numbers from frontend:', data.markedNumbers);
+  
+  // Update player's marked numbers from frontend
+  for (const [sId, player] of this.players) {
+    if (player.userId === data.userId) {
+      player.markedNumbers = data.markedNumbers;
+      console.log(`✅ Updated player ${data.userId} with ${data.markedNumbers.length} marked numbers`);
+      break;
+    }
+  }
+  
+  // Force winner check
+  await this.checkForWinners(0, 0);
+});
+	  
+	  
       socket.on('disconnect', () => {
         this.handleDisconnect(socket);
       });

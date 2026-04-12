@@ -391,20 +391,31 @@ console.log('   location.state?.gameId:', location.state?.gameId);
           )}
         </div>
       </div>
-      <button 
-  className="debug-button" 
+     <button 
   onClick={() => {
-    console.log('=== DEBUG: MANUAL WINNER CHECK ===');
-    console.log('Marked numbers:', markedNumbers);
-    console.log('Selected cartelas:', selectedCartelas);
-    socket.emit('force-check-winner', {
+    console.log('🔴 MANUAL WINNER CHECK');
+    console.log('Current marked numbers:', markedNumbers);
+    console.log('Current gameId:', currentGameId);
+    
+    // Force emit winner check with correct gameId
+    socket.emit('force-winner-check', {
       userId: user.id,
-      gameId: currentGameId || location.state?.gameId
+      gameId: currentGameId || location.state?.gameId,
+      markedNumbers: markedNumbers
     });
   }}
-  style={{background: 'red', color: 'white', marginLeft: '10px'}}
+  style={{
+    background: '#ff4444',
+    color: 'white',
+    padding: '15px',
+    margin: '10px',
+    fontSize: '16px',
+    borderRadius: '10px',
+    border: 'none',
+    cursor: 'pointer'
+  }}
 >
-  🔍 FORCE CHECK WINNER
+  🏆 FORCE WINNER CHECK 🏆
 </button>
       {showConfetti && <Confetti />}
       {showWinnerModal && winner && (
