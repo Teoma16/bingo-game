@@ -542,13 +542,13 @@ async checkForWinners(calledNumber, callCount) {
     
     const availableNumbers = allNumbers.filter(n => !calledNumbers.includes(n));
     
-    if (availableNumbers.length === 0) {
+ /*   if (availableNumbers.length === 0) {
       clearInterval(this.gameInterval);
       this.io.emit('game-ended', { message: 'Game ended - No winner!' });
       setTimeout(() => this.startNewGame(), 5000);
       return;
     }
-    
+   */ 
     const randomIndex = Math.floor(Math.random() * availableNumbers.length);
     const calledNumber = availableNumbers[randomIndex];
     calledNumbers.push(calledNumber);

@@ -94,6 +94,8 @@ const GameRoom = ({ user }) => {
     
     newSocket.on('game-started', (data) => {
       console.log('Game started event received:', data);
+	    console.log('🔥🔥🔥 GAME-STARTED EVENT FIRED! 🔥🔥🔥');
+  console.log('Full data:', data);
       setCurrentGameId(data.gameId);
       setGameNumber(data.gameNumber);
       setPrizePool(data.prizePool);
