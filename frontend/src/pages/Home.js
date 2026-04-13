@@ -166,14 +166,14 @@ const handleWithdraw = async () => {
   };
 
   // Handle number click - Select or Deselect
-  const handleNumberClick = async (number) => {
+ const handleNumberClick = async (number) => {
   if (gameStatus !== 'waiting') {
     toast.error('Game already started! Please wait for next game.');
     return;
   }
   
   if (selectedNumbers.includes(number)) {
-    // DESELECT - This is YOUR selected number
+    // DESELECT
     if (socket) {
       socket.emit('deselect-cartela', {
         luckyNumber: number,
@@ -181,11 +181,14 @@ const handleWithdraw = async () => {
       });
     }
     setSelectedNumbers(prev => prev.filter(n => n !== number));
-    setSelectedCartelas(prev => prev.filter(c => c.lucky_number !== number));
+    setSelectedCartelas(prev => {
+      const newCartelas = prev.filter(c => c.lucky_number !== number);
+      localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
+      return newCartelas;
+    });
     toast(`Cartela ${number} deselected`);
   } else {
-    // SELECT - This is a new number
-    // Check if number is taken by another player
+    // SELECT
     if (takenNumbers.includes(number)) {
       toast.error('This lucky number is already taken by another player!');
       return;
@@ -196,8 +199,9 @@ const handleWithdraw = async () => {
       return;
     }
     
-    if (balance < (selectedNumbers.length + 1) * 10) {
-      toast.error(`Insufficient balance! Need ${(selectedNumbers.length + 1) * 10} Birr for ${selectedNumbers.length + 1} cartela(s).`);
+    const requiredBalance = (selectedNumbers.length + 1) * 10;
+    if (balance < requiredBalance) {
+      toast.error(`Insufficient balance! Need ${requiredBalance} Birr.`);
       return;
     }
     
@@ -209,12 +213,23 @@ const handleWithdraw = async () => {
           userId: user.id
         });
       }
+      
       setSelectedNumbers(prev => [...prev, number]);
-      setSelectedCartelas(prev => [...prev, {
+      
+      const newCartela = {
         lucky_number: number,
         card_data: cartelaData.card_data
-      }]);
-    // toast.success(`Cartela ${number} selected!`);
+      };
+      
+      setSelectedCartelas(prev => {
+        const newCartelas = [...prev, newCartela];
+        // CRITICAL: Save to localStorage immediately
+        localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
+        console.log('💾 Saved cartela to localStorage:', newCartelas);
+        return newCartelas;
+      });
+      
+      toast.success(`Cartela ${number} selected!`);
     }
   }
 };
@@ -306,14 +321,19 @@ newSocket.on('game-state', (data) => {
     
   // In your game-started event listener
 newSocket.on('game-started', (data) => {
-  console.log('🎮 GAME STARTED - Sending cartelas to GameRoom');
-  console.log('Selected cartelas:', selectedCartelas);
-  console.log('Selected numbers:', selectedNumbers);
+  console.log('🎮 GAME STARTED - Preparing navigation');
   
-  // CRITICAL: Save cartelas to localStorage before navigating
-  if (selectedCartelas.length > 0) {
-    localStorage.setItem('userCartelas', JSON.stringify(selectedCartelas));
+  // Get cartelas from state or localStorage
+  let cartelasToSend = selectedCartelas;
+  if (cartelasToSend.length === 0) {
+    const saved = localStorage.getItem('userCartelas');
+    if (saved) {
+      cartelasToSend = JSON.parse(saved);
+      console.log('📋 Retrieved cartelas from localStorage:', cartelasToSend);
+    }
   }
+  
+  console.log('📋 Sending cartelas to GameRoom:', cartelasToSend.length);
   
   const winnerAmt = (data.prizePool || 0) * 0.81;
   
@@ -323,8 +343,7 @@ newSocket.on('game-started', (data) => {
       gameNumber: data.gameNumber,
       prizePool: data.prizePool,
       winnerAmount: winnerAmt,
-      selectedCartelas: selectedCartelas,
-      selectedNumbers: selectedNumbers
+      selectedCartelas: cartelasToSend 
     } 
   });
 });

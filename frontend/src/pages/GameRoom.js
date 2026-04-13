@@ -31,55 +31,64 @@ const GameRoom = ({ user }) => {
   const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
 
   // Load cartelas from location state or localStorage
- // Load cartelas from location state or localStorage
+// Load cartelas from location state or localStorage
 useEffect(() => {
   console.log('=== GAMEROOM LOADING CARTELAS ===');
   console.log('Location state:', location.state);
   
   let cartelas = [];
   
-  // FIRST: Try location state
+  // Method 1: From location state
   if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
     cartelas = location.state.selectedCartelas;
-    console.log('✅ Got cartelas from location state:', cartelas.length);
+    console.log('✅ Method 1 - Got from location state:', cartelas.length);
   } 
-  // SECOND: Try localStorage
+  // Method 2: From localStorage
   else {
     const savedCartelas = localStorage.getItem('userCartelas');
     if (savedCartelas) {
       cartelas = JSON.parse(savedCartelas);
-      console.log('✅ Got cartelas from localStorage:', cartelas.length);
-      // Also update location state for consistency
-      if (location.state) {
-        location.state.selectedCartelas = cartelas;
-      }
+      console.log('✅ Method 2 - Got from localStorage:', cartelas.length);
     }
   }
   
-  // THIRD: Try to get from API if still empty
-  if (cartelas.length === 0 && user?.id) {
-    console.log('⚠️ No cartelas found, fetching from API...');
-    fetchUserCartelas();
-  } else {
+  // Method 3: From sessionStorage as backup
+  if (cartelas.length === 0) {
+    const sessionCartelas = sessionStorage.getItem('userCartelas');
+    if (sessionCartelas) {
+      cartelas = JSON.parse(sessionCartelas);
+      console.log('✅ Method 3 - Got from sessionStorage:', cartelas.length);
+    }
+  }
+  
+  if (cartelas.length > 0) {
     setSelectedCartelas(cartelas);
-    console.log('📋 Setting cartelas in state:', cartelas.length);
+    console.log('📋 FINAL - Cartelas set in state:', cartelas.length);
+  } else {
+    console.log('❌ NO CARTELAS FOUND!');
+    // Emergency: Try to fetch from API
+    if (user?.id) {
+      fetchUserCartelas();
+    }
   }
 }, [location.state, user]);
 
-  const fetchUserCartelas = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/game/user-cartelas/${user.id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      console.log('API cartelas response:', response.data);
-      if (response.data.cartelas && response.data.cartelas.length > 0) {
-        setSelectedCartelas(response.data.cartelas);
-        localStorage.setItem('userCartelas', JSON.stringify(response.data.cartelas));
-      }
-    } catch (error) {
-      console.error('Failed to fetch cartelas:', error);
+const fetchUserCartelas = async () => {
+  try {
+    console.log('🔄 Emergency fetch from API...');
+    const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/game/user-cartelas/${user.id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    console.log('API response:', response.data);
+    if (response.data.cartelas && response.data.cartelas.length > 0) {
+      setSelectedCartelas(response.data.cartelas);
+      localStorage.setItem('userCartelas', JSON.stringify(response.data.cartelas));
+      console.log('✅ Got cartelas from API:', response.data.cartelas.length);
     }
-  };
+  } catch (error) {
+    console.error('Failed to fetch cartelas:', error);
+  }
+};
 
   const numberToLetter = (number) => {
     if (number >= 1 && number <= 15) return `B${number}`;
@@ -317,6 +326,15 @@ console.log('   location.state?.gameId:', location.state?.gameId);
           ))}
         </div>
       </div>
+	  
+	  
+	  
+	  <div style={{background: '#333', padding: '10px', margin: '10px', borderRadius: '5px', fontSize: '12px'}}>
+  <div>🔍 Debug:</div>
+  <div>location.state: {location.state ? 'YES' : 'NO'}</div>
+  <div>selectedCartelas length: {selectedCartelas.length}</div>
+  <div>localStorage: {localStorage.getItem('userCartelas') ? 'YES' : 'NO'}</div>
+</div>
     );
   };
 
