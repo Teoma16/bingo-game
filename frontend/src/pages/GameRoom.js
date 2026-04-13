@@ -122,16 +122,20 @@ newSocket.on('connect_error', (error) => {
       });
     }
     
-    newSocket.on('game-started', (data) => {
-      console.log('Game started event received:', data);
-	    console.log('🔥🔥🔥 GAME-STARTED EVENT FIRED! 🔥🔥🔥');
+newSocket.on('game-started', (data) => {
+  console.log('🔥🔥🔥 GAME-STARTED EVENT FIRED! 🔥🔥🔥');
+   console.log('🔴🔴🔴 GAME-STARTED RECEIVED 🔴🔴🔴');
   console.log('Full data:', data);
-      setCurrentGameId(data.gameId);
-      setGameNumber(data.gameNumber);
-      setPrizePool(data.prizePool);
-      setWinnerAmount(data.winnerAmount);
-      toast.success(data.message);
-    });
+  console.log('Setting currentGameId to:', data.gameId);
+  
+  // THIS MUST SET THE STATE
+  setCurrentGameId(data.gameId);
+  setGameNumber(data.gameNumber);
+  setPrizePool(data.prizePool);
+  setWinnerAmount(data.winnerAmount);
+  
+  toast.success(data.message);
+});
     
  newSocket.on('number-called', (data) => {
   console.log('📞 NUMBER CALLED:', data.number);
@@ -220,12 +224,12 @@ newSocket.on('connect_error', (error) => {
 
   const handlePressBingo = () => {
     if (socket && socket.connected) {
-      const gameIdToUse = currentGameId || location.state?.gameId;
-      console.log('Pressing BINGO with gameId:', gameIdToUse);
-      socket.emit('press-bingo', {
-        userId: user.id,
-        gameId: gameIdToUse
-      });
+     const gameIdToUse = location.state?.gameId;  // Use this directly
+console.log('📤 Sending auto-mark with gameId:', gameIdToUse);
+newSocket.emit('auto-mark', {
+  userId: user.id,
+  number: data.number
+});
       toast('BINGO! Checking your cards...');
     } else {
       toast.error('Connection lost. Please refresh the page.');
