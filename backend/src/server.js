@@ -29,7 +29,7 @@ app.use((req, res, next) => {
   }
   next();
 });
-a// Replace your CORS configuration with this
+// Replace your CORS configuration with this
 app.use(cors({
   origin: ['https://earnest-amazement-production.up.railway.app', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
