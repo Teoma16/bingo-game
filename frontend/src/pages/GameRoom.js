@@ -100,12 +100,7 @@ const fetchUserCartelas = async () => {
   };
 
   useEffect(() => {
- const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
-  transports: ['polling', 'websocket'],
-  withCredentials: true,
-  secure: true,
-  rejectUnauthorized: false
-});
+ const newSocket = io('https://bingo-game-production-dd0b.up.railway.app');
 
 newSocket.on('connect', () => {
   console.log('✅ WebSocket connected successfully!');
