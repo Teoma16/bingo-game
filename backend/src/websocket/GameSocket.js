@@ -78,51 +78,74 @@ class GameSocket {
   }
 
   async handleRegisterPlayer(socket, { userId, phoneNumber }) {
-    try {
-      const user = await User.findOne({ 
-        where: { 
-          [require('sequelize').Op.or]: [
-            { id: userId },
-            { phone_number: phoneNumber }
-          ]
-        } 
-      });
-      
-      if (!user) {
-        socket.emit('error', { message: 'User not found' });
-        return;
-      }
-      
-      this.players.set(socket.id, {
-        userId: user.id,
-        cartelaIds: [],
-        markedNumbers: [],
-        socketId: socket.id
-      });
-      
-      socket.emit('registered', {
-        user: {
-          id: user.id,
-          username: user.username,
-          wallet_balance: user.wallet_balance,
-          total_played: user.total_played,
-          total_won: user.total_won
-        }
-      });
-      
-      if (this.currentGame) {
-        socket.emit('game-state', {
-          status: this.currentGame.status,
-          prizePool: this.currentGame.prize_pool,
-          winnerAmount: this.currentGame.prize_pool * 0.81,
-          calledNumbers: this.currentGame.called_numbers || []
-        });
-      }
-    } catch (error) {
-      console.error('Register error:', error);
-      socket.emit('error', { message: 'Registration failed' });
+  try {
+    const user = await User.findOne({ 
+      where: { 
+        [require('sequelize').Op.or]: [
+          { id: userId },
+          { phone_number: phoneNumber }
+        ]
+      } 
+    });
+    
+    if (!user) {
+      socket.emit('error', { message: 'User not found' });
+      return;
     }
+    
+    this.players.set(socket.id, {
+      userId: user.id,
+      cartelaIds: [],
+      socketId: socket.id
+    });
+    
+    // IMPORTANT: If game is active, mark all previously called numbers for this player
+    if (this.currentGame && this.currentGame.status === 'active') {
+      const gamePlayer = await GamePlayer.findOne({
+        where: { game_id: this.currentGame.id, user_id: user.id }
+      });
+      
+      if (gamePlayer) {
+        let markedNumbers = gamePlayer.marked_numbers || [];
+        const calledNumbers = this.currentGame.called_numbers || [];
+        
+        // Mark all numbers that have been called so far
+        for (const calledNum of calledNumbers) {
+          if (!markedNumbers.includes(calledNum)) {
+            markedNumbers.push(calledNum);
+          }
+        }
+        
+        gamePlayer.marked_numbers = markedNumbers;
+        await gamePlayer.save();
+        console.log(`[SYNC] Player ${user.id} synced ${markedNumbers.length} marked numbers from ${calledNumbers.length} called numbers`);
+      }
+    }
+    
+    socket.emit('registered', {
+      user: {
+        id: user.id,
+        username: user.username,
+        wallet_balance: user.wallet_balance,
+        total_played: user.total_played,
+        total_won: user.total_won
+      }
+    });
+    
+    if (this.currentGame) {
+      const winnerAmount = (this.currentGame.prize_pool * 0.81).toFixed(2);
+      socket.emit('game-state', {
+        status: this.currentGame.status,
+        prizePool: this.currentGame.prize_pool,
+        winnerAmount: winnerAmount,
+        calledNumbers: this.currentGame.called_numbers || []
+      });
+    }
+  } catch (error) {
+    console.error('Register error:', error);
+    socket.emit('error', { message: 'Registration failed' });
   }
+}
 
   async sendGameState(socket) {
     if (this.currentGame) {
@@ -523,7 +546,7 @@ async startGame() {
         clearInterval(this.gameInterval);
       }
       
-    }, 4000);
+    }, 2000);
   }
 
   async processWin(winnerId) {
@@ -595,7 +618,7 @@ async startGame() {
   
   // Announce winner
   this.io.emit('game-ended', {
-    winners: [{ userId: winnerId, amount: roundedPrize }],
+    winners: [{ userId: winnerId, amount: roundedPrize, totalAmount: roundedPrize, bonus: 0 }],
     prizeAmount: roundedPrize,
     message: `🎉 BINGO! ${user?.username || 'Player'} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
   });

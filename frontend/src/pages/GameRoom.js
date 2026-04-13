@@ -144,56 +144,57 @@ newSocket.on('game-started', (data) => {
 });
     
  newSocket.on('number-called', (data) => {
-  console.log('📞 NUMBER CALLED:', data.number);
-  
-  // CRITICAL: Mark the number immediately
-  if (!markedNumbers.includes(data.number)) {
-    setMarkedNumbers(prev => {
-      const newMarked = [...prev, data.number];
-      console.log(`✅ Marked ${data.number}. Total marked: ${newMarked.length}`);
-      return newMarked;
-    });
-    
-    // Send to server
-    if (newSocket && newSocket.connected) {
-      newSocket.emit('auto-mark', {
-        userId: user.id,
-        number: data.number
-      });
-    }
-  }
-  
-  // Update UI
+  console.log('📞 Number called:', data.number);
   const numberWithLetter = numberToLetter(data.number);
   setCurrentNumber(data.number);
   setCurrentNumberWithLetter(numberWithLetter);
   setCalledNumbers(data.calledNumbers);
+  
+  const calledWithLetters = data.calledNumbers.map(num => numberToLetter(num));
+  setCalledNumbersWithLetters(calledWithLetters);
   setCallCount(data.callCount);
+  
+  // Auto-mark the number
+  if (!markedNumbers.includes(data.number)) {
+    setMarkedNumbers(prev => [...prev, data.number]);
+    
+    // Send to server
+    if (newSocket && newSocket.connected) {
+      console.log('📤 Sending auto-mark for number:', data.number);
+      newSocket.emit('auto-mark', {
+        userId: user.id,
+        gameId: gameId,
+        number: data.number
+      });
+    }
+  }
 });
     
     newSocket.on('game-ended', (data) => {
-      console.log('Game ended data:', data);
-      
-      if (data.winners && data.winners.length > 0 && data.winners[0].userId === user?.id) {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 5000);
-      }
-      
-      if (data.winners && data.winners.length > 0) {
-        const winnerData = data.winners[0];
-        setWinner({
-          userId: winnerData.userId,
-          username: winnerData.username || `Player ${winnerData.userId}`,
-          amount: winnerData.amount,
-          totalAmount: winnerData.totalAmount || winnerData.amount,
-          bonus: winnerData.bonus || 0
-        });
-        setShowWinnerModal(true);
-      }
-      
-      setGameActive(false);
-      localStorage.removeItem('userCartelas');
+  console.log('Game ended data:', data);
+  
+  // Set winner information
+  if (data.winners && data.winners.length > 0) {
+    const winnerData = data.winners[0];
+    setWinner({
+      userId: winnerData.userId,
+      amount: winnerData.amount,
+      totalAmount: winnerData.totalAmount || winnerData.amount,
+      bonus: winnerData.bonus || 0
     });
+    setShowWinnerModal(true);
+  }
+  
+  setGameActive(false);
+  
+  // Clear stored cartelas
+  localStorage.removeItem('userCartelas');
+  
+  // Redirect after 5 seconds (but let the modal handle it)
+  setTimeout(() => {
+    navigate('/');
+  }, 5000);
+});
     
     newSocket.on('invalid-bingo', (data) => {
       toast.error(data.message);
@@ -225,16 +226,18 @@ useEffect(() => {
   
   return () => testSocket.disconnect();
 }, []);
-  useEffect(() => {
-    if (showWinnerModal) {
-      console.log('Winner modal shown, redirecting in 5 seconds...');
-      const timer = setTimeout(() => {
-        console.log('Redirecting to home...');
-        navigate('/');
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [showWinnerModal, navigate]);
+// Auto redirect after winner modal shows - redirects to home after 5 seconds
+useEffect(() => {
+  if (showWinnerModal) {
+    console.log('Winner modal shown, redirecting to home in 5 seconds...');
+    const timer = setTimeout(() => {
+      console.log('Redirecting to home now...');
+      setShowWinnerModal(false);
+      navigate('/');
+    }, 5000);
+    return () => clearTimeout(timer);
+  }
+}, [showWinnerModal, navigate]);
 
   const handlePressBingo = () => {
     if (socket && socket.connected) {
