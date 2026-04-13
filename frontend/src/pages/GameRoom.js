@@ -61,10 +61,7 @@ const GameRoom = ({ user }) => {
   }, [location.state]);
 
   useEffect(() => {
-    const newSocket = io(API_URL, {
-      transports: ['polling', 'websocket'],
-      withCredentials: true
-    });
+    const newSocket = io(API_URL);
     setSocket(newSocket);
     
     newSocket.on('connect', () => {
