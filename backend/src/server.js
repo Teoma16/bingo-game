@@ -31,9 +31,9 @@ app.use((req, res, next) => {
 });
 // Replace your CORS configuration with this
 app.use(cors({
-  origin: ['https://earnest-amazement-production.up.railway.app', 'http://localhost:3000'],
+ origin: ['https://earnest-amazement-production.up.railway.app', 'http://localhost:3000', 'http://localhost:3001'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: false,  // Change to false
+  credentials: true,  // Change to false
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());

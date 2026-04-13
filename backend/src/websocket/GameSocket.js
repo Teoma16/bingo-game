@@ -6,9 +6,9 @@ class GameSocket {
   constructor(server) {
     this.io = new Server(server, {
   cors: {
-    origin: ['https://earnest-amazement-production.up.railway.app', 'http://localhost:3000'],
+    origin: '*',
     methods: ["GET", "POST"],
-    credentials: false,
+    credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
   }
 });
