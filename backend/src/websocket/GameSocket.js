@@ -384,14 +384,16 @@ async handleAutoMark(socket, { userId, number }) {
     this.currentGame.total_players = this.getUniquePlayerCount();
     await this.currentGame.save();
     
-    this.io.emit('game-started', {
+   // this.io.emit('game-started', {
+		const gameStartedData = {
       gameId: this.currentGame.id,
       gameNumber: this.currentGame.game_number,
       prizePool: this.currentGame.prize_pool,
       winnerAmount: this.currentGame.prize_pool * 0.81,
       message: 'Game Started!'
-    });
-    
+    };
+    console.log('🔴🔴🔴 EMITTING GAME-STARTED EVENT:', gameStartedData);
+  this.io.emit('game-started', gameStartedData);
     this.callNumbers();
   }
 

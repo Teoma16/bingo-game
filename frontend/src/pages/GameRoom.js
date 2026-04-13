@@ -108,6 +108,12 @@ const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
 
 newSocket.on('connect', () => {
   console.log('✅ WebSocket connected successfully!');
+  if (user && user.id) {
+      newSocket.emit('register-player', {
+        userId: user.id,
+        phoneNumber: user.phone_number
+      });
+    }
 });
 
 newSocket.on('connect_error', (error) => {
@@ -123,7 +129,7 @@ newSocket.on('connect_error', (error) => {
     }
     
 newSocket.on('game-started', (data) => {
-  console.log('🔥🔥🔥 GAME-STARTED EVENT FIRED! 🔥🔥🔥');
+
    console.log('🔴🔴🔴 GAME-STARTED RECEIVED 🔴🔴🔴');
   console.log('Full data:', data);
   console.log('Setting currentGameId to:', data.gameId);
@@ -210,7 +216,15 @@ newSocket.on('game-started', (data) => {
       if (newSocket) newSocket.disconnect();
     };
   }, [user, navigate, currentGameId, location.state]);
-
+useEffect(() => {
+  // Test if game-started event ever fires
+  const testSocket = io('https://bingo-game-production-dd0b.up.railway.app');
+  testSocket.on('game-started', (data) => {
+    console.log('🎯🎯🎯 TEST: game-started event fired!', data);
+  });
+  
+  return () => testSocket.disconnect();
+}, []);
   useEffect(() => {
     if (showWinnerModal) {
       console.log('Winner modal shown, redirecting in 5 seconds...');
