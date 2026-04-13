@@ -30,66 +30,6 @@ const GameRoom = ({ user }) => {
 
   const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
 
-  // Load cartelas from location state or localStorage
-// Load cartelas from location state or localStorage
-useEffect(() => {
-  console.log('=== GAMEROOM LOADING CARTELAS ===');
-  console.log('Location state:', location.state);
-  
-  let cartelas = [];
-  
-  // Method 1: From location state
-  if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
-    cartelas = location.state.selectedCartelas;
-    console.log('✅ Method 1 - Got from location state:', cartelas.length);
-  } 
-  // Method 2: From localStorage
-  else {
-    const savedCartelas = localStorage.getItem('userCartelas');
-    if (savedCartelas) {
-      cartelas = JSON.parse(savedCartelas);
-      console.log('✅ Method 2 - Got from localStorage:', cartelas.length);
-    }
-  }
-  
-  // Method 3: From sessionStorage as backup
-  if (cartelas.length === 0) {
-    const sessionCartelas = sessionStorage.getItem('userCartelas');
-    if (sessionCartelas) {
-      cartelas = JSON.parse(sessionCartelas);
-      console.log('✅ Method 3 - Got from sessionStorage:', cartelas.length);
-    }
-  }
-  
-  if (cartelas.length > 0) {
-    setSelectedCartelas(cartelas);
-    console.log('📋 FINAL - Cartelas set in state:', cartelas.length);
-  } else {
-    console.log('❌ NO CARTELAS FOUND!');
-    // Emergency: Try to fetch from API
-    if (user?.id) {
-      fetchUserCartelas();
-    }
-  }
-}, [location.state, user]);
-
-const fetchUserCartelas = async () => {
-  try {
-    console.log('🔄 Emergency fetch from API...');
-    const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/game/user-cartelas/${user.id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    console.log('API response:', response.data);
-    if (response.data.cartelas && response.data.cartelas.length > 0) {
-      setSelectedCartelas(response.data.cartelas);
-      localStorage.setItem('userCartelas', JSON.stringify(response.data.cartelas));
-      console.log('✅ Got cartelas from API:', response.data.cartelas.length);
-    }
-  } catch (error) {
-    console.error('Failed to fetch cartelas:', error);
-  }
-};
-
   const numberToLetter = (number) => {
     if (number >= 1 && number <= 15) return `B${number}`;
     if (number >= 16 && number <= 30) return `I${number}`;
@@ -99,34 +39,50 @@ const fetchUserCartelas = async () => {
     return number.toString();
   };
 
+  // Load cartelas from location state or localStorage
   useEffect(() => {
- const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
-  transports: ['polling', 'websocket'],
-  withCredentials: true,
-  secure: true,
-  rejectUnauthorized: false
-});
-
-newSocket.on('connect', () => {
-  console.log('✅ WebSocket connected successfully!');
-});
-
-newSocket.on('connect_error', (error) => {
-  console.log('❌ WebSocket connection error:', error);
-});
-    setSocket(newSocket);
+    console.log('=== GAMEROOM LOADING CARTELAS ===');
+    console.log('Location state:', location.state);
     
-    if (user && user.id) {
-      newSocket.emit('register-player', {
-        userId: user.id,
-        phoneNumber: user.phone_number
-      });
+    let cartelas = [];
+    
+    if (location.state?.selectedCartelas && location.state.selectedCartelas.length > 0) {
+      cartelas = location.state.selectedCartelas;
+      console.log('Got cartelas from location state:', cartelas.length);
+    } else {
+      const savedCartelas = localStorage.getItem('userCartelas');
+      if (savedCartelas) {
+        cartelas = JSON.parse(savedCartelas);
+        console.log('Got cartelas from localStorage:', cartelas.length);
+      }
     }
     
+    setSelectedCartelas(cartelas);
+  }, [location.state]);
+
+  useEffect(() => {
+    const newSocket = io(API_URL, {
+      transports: ['polling', 'websocket'],
+      withCredentials: true
+    });
+    setSocket(newSocket);
+    
+    newSocket.on('connect', () => {
+      console.log('✅ WebSocket connected');
+      if (user && user.id) {
+        newSocket.emit('register-player', {
+          userId: user.id,
+          phoneNumber: user.phone_number
+        });
+      }
+    });
+    
+    newSocket.on('connect_error', (error) => {
+      console.log('❌ WebSocket error:', error);
+    });
+    
     newSocket.on('game-started', (data) => {
-      console.log('Game started event received:', data);
-	    console.log('🔥🔥🔥 GAME-STARTED EVENT FIRED! 🔥🔥🔥');
-  console.log('Full data:', data);
+      console.log('Game started:', data);
       setCurrentGameId(data.gameId);
       setGameNumber(data.gameNumber);
       setPrizePool(data.prizePool);
@@ -134,36 +90,28 @@ newSocket.on('connect_error', (error) => {
       toast.success(data.message);
     });
     
- newSocket.on('number-called', (data) => {
-  console.log('📞 NUMBER CALLED:', data.number);
-  
-  // CRITICAL: Mark the number immediately
-  if (!markedNumbers.includes(data.number)) {
-    setMarkedNumbers(prev => {
-      const newMarked = [...prev, data.number];
-      console.log(`✅ Marked ${data.number}. Total marked: ${newMarked.length}`);
-      return newMarked;
+    newSocket.on('number-called', (data) => {
+      console.log('Number called:', data.number);
+      
+      if (!markedNumbers.includes(data.number)) {
+        setMarkedNumbers(prev => [...prev, data.number]);
+        if (newSocket && newSocket.connected) {
+          newSocket.emit('auto-mark', {
+            userId: user.id,
+            number: data.number
+          });
+        }
+      }
+      
+      const numberWithLetter = numberToLetter(data.number);
+      setCurrentNumber(data.number);
+      setCurrentNumberWithLetter(numberWithLetter);
+      setCalledNumbers(data.calledNumbers);
+      setCallCount(data.callCount);
     });
     
-    // Send to server
-    if (newSocket && newSocket.connected) {
-      newSocket.emit('auto-mark', {
-        userId: user.id,
-        number: data.number
-      });
-    }
-  }
-  
-  // Update UI
-  const numberWithLetter = numberToLetter(data.number);
-  setCurrentNumber(data.number);
-  setCurrentNumberWithLetter(numberWithLetter);
-  setCalledNumbers(data.calledNumbers);
-  setCallCount(data.callCount);
-});
-    
     newSocket.on('game-ended', (data) => {
-      console.log('Game ended data:', data);
+      console.log('Game ended:', data);
       
       if (data.winners && data.winners.length > 0 && data.winners[0].userId === user?.id) {
         setShowConfetti(true);
@@ -175,9 +123,7 @@ newSocket.on('connect_error', (error) => {
         setWinner({
           userId: winnerData.userId,
           username: winnerData.username || `Player ${winnerData.userId}`,
-          amount: winnerData.amount,
-          totalAmount: winnerData.totalAmount || winnerData.amount,
-          bonus: winnerData.bonus || 0
+          amount: winnerData.amount
         });
         setShowWinnerModal(true);
       }
@@ -190,29 +136,21 @@ newSocket.on('connect_error', (error) => {
       toast.error(data.message);
     });
     
-    newSocket.on('fee-deducted', (data) => {
-      toast(data.message);
-    });
-    
     newSocket.on('game-update', (data) => {
-      console.log('Game update received:', data);
       if (data.prizePool) {
         setPrizePool(data.prizePool);
-        const winnerAmt = data.prizePool * 0.81;
-        setWinnerAmount(winnerAmt);
+        setWinnerAmount(data.prizePool * 0.81);
       }
     });
     
     return () => {
       if (newSocket) newSocket.disconnect();
     };
-  }, [user, navigate, currentGameId, location.state]);
+  }, []);
 
   useEffect(() => {
     if (showWinnerModal) {
-      console.log('Winner modal shown, redirecting in 5 seconds...');
       const timer = setTimeout(() => {
-        console.log('Redirecting to home...');
         navigate('/');
       }, 5000);
       return () => clearTimeout(timer);
@@ -221,28 +159,24 @@ newSocket.on('connect_error', (error) => {
 
   const handlePressBingo = () => {
     if (socket && socket.connected) {
-      const gameIdToUse = currentGameId || location.state?.gameId;
-      console.log('Pressing BINGO with gameId:', gameIdToUse);
       socket.emit('press-bingo', {
         userId: user.id,
-        gameId: gameIdToUse
+        gameId: currentGameId || location.state?.gameId
       });
       toast('BINGO! Checking your cards...');
-    } else {
-      toast.error('Connection lost. Please refresh the page.');
     }
   };
 
   const convertToGrid = (cartelaData) => {
     const grid = [];
     for (let row = 0; row < 5; row++) {
-      const rowData = [];
-      rowData.push(cartelaData.B[row]);
-      rowData.push(cartelaData.I[row]);
-      rowData.push(cartelaData.N[row]);
-      rowData.push(cartelaData.G[row]);
-      rowData.push(cartelaData.O[row]);
-      grid.push(rowData);
+      grid.push([
+        cartelaData.B[row],
+        cartelaData.I[row],
+        cartelaData.N[row],
+        cartelaData.G[row],
+        cartelaData.O[row]
+      ]);
     }
     return grid;
   };
@@ -257,10 +191,7 @@ newSocket.on('connect_error', (error) => {
     }
     
     const grid = convertToGrid(cartela.card_data);
- const gameIdToUse = currentGameId || location.state?.gameId;
-console.log('📤 Sending auto-mark with gameId:', gameIdToUse);
-console.log('   currentGameId state:', currentGameId);
-console.log('   location.state?.gameId:', location.state?.gameId);   
+    
     return (
       <div key={index} className="game-cartela">
         <h4>Cartela #{cartela.lucky_number}</h4>
@@ -298,39 +229,24 @@ console.log('   location.state?.gameId:', location.state?.gameId);
 
   const renderBingoBoard = () => {
     const calledMap = new Set(calledNumbers);
+    const columns = { B: [], I: [], N: [], G: [], O: [] };
     
-    const columns = {
-      B: { numbers: [], range: [1, 15] },
-      I: { numbers: [], range: [16, 30] },
-      N: { numbers: [], range: [31, 45] },
-      G: { numbers: [], range: [46, 60] },
-      O: { numbers: [], range: [61, 75] }
-    };
-    
-    for (let col in columns) {
-      const [min, max] = columns[col].range;
-      for (let i = min; i <= max; i++) {
-        columns[col].numbers.push({
-          number: i,
-          called: calledMap.has(i),
-          display: `${col}${i}`
-        });
-      }
-    }
+    for (let i = 1; i <= 15; i++) columns.B.push({ number: i, called: calledMap.has(i), display: `B${i}` });
+    for (let i = 16; i <= 30; i++) columns.I.push({ number: i, called: calledMap.has(i), display: `I${i}` });
+    for (let i = 31; i <= 45; i++) columns.N.push({ number: i, called: calledMap.has(i), display: `N${i}` });
+    for (let i = 46; i <= 60; i++) columns.G.push({ number: i, called: calledMap.has(i), display: `G${i}` });
+    for (let i = 61; i <= 75; i++) columns.O.push({ number: i, called: calledMap.has(i), display: `O${i}` });
     
     return (
       <div className="bingo-board-full">
         <h3>🎯 Called Numbers Board</h3>
         <div className="bingo-columns">
-          {Object.entries(columns).map(([letter, data]) => (
+          {Object.entries(columns).map(([letter, numbers]) => (
             <div key={letter} className="bingo-column-full">
               <div className="column-header">{letter}</div>
               <div className="column-numbers-full">
-                {data.numbers.map((item) => (
-                  <div
-                    key={item.number}
-                    className={`bingo-number ${item.called ? 'called' : ''}`}
-                  >
+                {numbers.map((item) => (
+                  <div key={item.number} className={`bingo-number ${item.called ? 'called' : ''}`}>
                     {item.display}
                   </div>
                 ))}
@@ -339,21 +255,11 @@ console.log('   location.state?.gameId:', location.state?.gameId);
           ))}
         </div>
       </div>
-	  
-	  
-	  
-	  <div style={{background: '#333', padding: '10px', margin: '10px', borderRadius: '5px', fontSize: '12px'}}>
-
-  <div>location.state: {location.state ? 'YES' : 'NO'}</div>
-  <div>selectedCartelas length: {selectedCartelas.length}</div>
-  <div>localStorage: {localStorage.getItem('userCartelas') ? 'YES' : 'NO'}</div>
-</div>
     );
   };
 
   const renderRecentCalls = () => {
     const recentCalls = [...calledNumbersWithLetters].reverse().slice(0, 12);
-    
     return (
       <div className="recent-calls">
         <h3>📢 Recent Calls</h3>
@@ -377,50 +283,15 @@ console.log('   location.state?.gameId:', location.state?.gameId);
           <span className="current-label">Current Number:</span>
           <span className="current-number">{currentNumberWithLetter || '---'}</span>
         </div>
-        <div className="call-count">
-          📞 Calls: {callCount}/75
-        </div>
+        <div className="call-count">📞 Calls: {callCount}/75</div>
         <div className="prize-info">
-          <div className="winner-prize-display">
-            🏆 Winner Gets: {winnerAmount.toFixed(2)} Birr 
-          </div>
+          <div className="winner-prize-display">🏆 Winner Gets: {winnerAmount.toFixed(2)} Birr</div>
         </div>
         <div className="game-controls">
-		{/* <button
-            className={`mode-toggle ${autoMark ? 'auto' : 'manual'}`}
-            onClick={() => setAutoMark(!autoMark)}
-          >
+          <button className="mode-toggle" onClick={() => setAutoMark(!autoMark)}>
             {autoMark ? '🤖 Auto-Mark ON' : '✋ Manual-Mark OFF'}
           </button>
-          <button className="bingo-button" onClick={handlePressBingo}>
-            🎲 BINGO!
-</button>*/}
-		  <button onClick={() => {
-  socket.emit('test-mark', { userId: user.id, number: 1 });
-}}>
-  TEST MARK NUMBER 1
-</button>
-<button 
-  onClick={() => {
-    console.log('=== DEBUG CARTELAS ===');
-    console.log('location.state:', location.state);
-    console.log('selectedCartelas state:', selectedCartelas);
-    console.log('localStorage:', localStorage.getItem('userCartelas'));
-  }}
-  style={{background: 'gray', padding: '10px', margin: '5px'}}
->
-  🔍 DEBUG CARTELAS
-</button>
-<button 
-  onClick={() => {
-    console.log('🔍 CURRENT MARKED NUMBERS:', markedNumbers);
-    console.log('Total marked:', markedNumbers.length);
-    socket.emit('get-marked-numbers', { userId: user.id });
-  }}
-  style={{background: 'blue', color: 'white', padding: '10px', margin: '5px'}}
->
-  🔍 SHOW MARKED NUMBERS
-</button>
+          <button className="bingo-button" onClick={handlePressBingo}>🎲 BINGO!</button>
         </div>
       </div>
       
@@ -433,10 +304,7 @@ console.log('   location.state?.gameId:', location.state?.gameId);
             ) : (
               <div className="no-cartelas">
                 <p>⚠️ No cartelas found!</p>
-                <p>Please make sure you selected lucky numbers before the game started.</p>
-                <button onClick={() => navigate('/')} className="back-button">
-                  ← Back to Home
-                </button>
+                <button onClick={() => navigate('/')} className="back-button">← Back to Home</button>
               </div>
             )}
           </div>
@@ -450,31 +318,12 @@ console.log('   location.state?.gameId:', location.state?.gameId);
       
       <div className="game-footer">
         <div className="game-status">
-          {gameActive ? (
-            <span className="status-active">🔴 Game In Progress - Mark your numbers!</span>
-          ) : (
-            <span className="status-ended">🏁 Game Ended - Redirecting to home...</span>
-          )}
+          {gameActive ? '🔴 Game In Progress' : '🏁 Game Ended'}
         </div>
       </div>
-<button 
-  onClick={() => {
-    console.log('🏆 FORCING WIN');
-    socket.emit('force-win', { userId: user.id });
-  }}
-  style={{
-    background: '#ff4444',
-    color: 'white',
-    padding: '15px',
-    fontSize: '18px',
-    margin: '10px',
-    borderRadius: '10px'
-  }}
->
-  🏆 FORCE WIN (TEST)
-🏆
-</button>
+      
       {showConfetti && <Confetti />}
+      
       {showWinnerModal && winner && (
         <div className="winner-modal-overlay">
           <div className="winner-modal">
@@ -485,11 +334,9 @@ console.log('   location.state?.gameId:', location.state?.gameId);
               <div className="firework"></div>
               <div className="firework"></div>
             </div>
-            
             <div className="winner-content">
               <div className="winner-trophy">🏆</div>
               <h1 className="winner-title">BINGO!</h1>
-              
               <div className="winner-announcement">
                 {winner.userId === user?.id ? (
                   <>
@@ -511,10 +358,7 @@ console.log('   location.state?.gameId:', location.state?.gameId);
                   </>
                 )}
               </div>
-              
-              <div className="winner-redirect">
-                Redirecting to home in 5 seconds...
-              </div>
+              <div className="winner-redirect">Redirecting to home in 5 seconds...</div>
             </div>
           </div>
         </div>
