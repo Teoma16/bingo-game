@@ -101,7 +101,8 @@ const fetchUserCartelas = async () => {
 
   useEffect(() => {
 // Remove the complex options and use simple connection
-const newSocket = io('ws://bingo-game-production-dd0b.up.railway.app', {
+const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
+  withCredentials: true,  // Add this
   transports: ['websocket']
 });
 
