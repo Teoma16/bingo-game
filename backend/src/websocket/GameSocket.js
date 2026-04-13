@@ -434,13 +434,51 @@ async handleAutoMark(socket, { userId, number }) {
         calledNumbers: calledNumbers,
         callCount: callCount
       });
-      
+      /*
       const hasWinner = await this.checkForWinners();
       if (hasWinner) {
         clearInterval(this.gameInterval);
       }
       
-    }, 4000);
+    }, 4000);*/
+	 // IMMEDIATE WINNER CHECK after each call
+    let winnerFound = false;
+    
+    for (const [socketId, player] of this.players) {
+      const marked = player.markedNumbers || [];
+      if (marked.length === 0) continue;
+      
+      for (const luckyNumber of player.cartelaIds) {
+        const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+        if (!cartela) continue;
+        
+        // Get all numbers in this cartela
+        const allCartelaNumbers = [
+          ...cartela.card_data.B,
+          ...cartela.card_data.I,
+          ...cartela.card_data.N,
+          ...cartela.card_data.G,
+          ...cartela.card_data.O
+        ].filter(n => n !== 'FREE');
+        
+        // Check if ALL numbers are marked
+        const allMarked = allCartelaNumbers.every(num => marked.includes(num));
+        
+        if (allMarked) {
+          console.log(`🏆🏆🏆 WINNER FOUND at call ${callCount}! Player ${player.userId} 🏆🏆🏆`);
+          winnerFound = true;
+          await this.processWin(player.userId);
+          break;
+        }
+      }
+      if (winnerFound) break;
+    }
+    
+    if (winnerFound) {
+      clearInterval(this.gameInterval);
+    }
+    
+  }, 4000);
   }
 
   async processWin(winnerId) {
