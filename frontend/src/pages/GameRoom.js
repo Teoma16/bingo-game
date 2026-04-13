@@ -343,7 +343,7 @@ console.log('   location.state?.gameId:', location.state?.gameId);
 	  
 	  
 	  <div style={{background: '#333', padding: '10px', margin: '10px', borderRadius: '5px', fontSize: '12px'}}>
-  <div>🔍 Debug:</div>
+
   <div>location.state: {location.state ? 'YES' : 'NO'}</div>
   <div>selectedCartelas length: {selectedCartelas.length}</div>
   <div>localStorage: {localStorage.getItem('userCartelas') ? 'YES' : 'NO'}</div>
