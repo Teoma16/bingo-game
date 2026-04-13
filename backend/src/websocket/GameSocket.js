@@ -4,9 +4,9 @@ const { User, Game, GamePlayer, Cartela, Transaction } = require('../models');
 
 class GameSocket {
   constructor(server) {
-    this.io = new Server(server, {
+  this.io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: ['https://earnest-amazement-production.up.railway.app', 'http://localhost:3000'],
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
