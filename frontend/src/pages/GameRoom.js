@@ -296,59 +296,50 @@ console.log('   location.state?.gameId:', location.state?.gameId);
   };
 
   const renderBingoBoard = () => {
-    const calledMap = new Set(calledNumbers);
-    
-    const columns = {
-      B: { numbers: [], range: [1, 15] },
-      I: { numbers: [], range: [16, 30] },
-      N: { numbers: [], range: [31, 45] },
-      G: { numbers: [], range: [46, 60] },
-      O: { numbers: [], range: [61, 75] }
-    };
-    
-    for (let col in columns) {
-      const [min, max] = columns[col].range;
-      for (let i = min; i <= max; i++) {
-        columns[col].numbers.push({
-          number: i,
-          called: calledMap.has(i),
-          display: `${col}${i}`
-        });
-      }
-    }
-    
-    return (
-      <div className="bingo-board-full">
-        <h3>🎯 Called Numbers Board</h3>
-        <div className="bingo-columns">
-          {Object.entries(columns).map(([letter, data]) => (
-            <div key={letter} className="bingo-column-full">
-              <div className="column-header">{letter}</div>
-              <div className="column-numbers-full">
-                {data.numbers.map((item) => (
-                  <div
-                    key={item.number}
-                    className={`bingo-number ${item.called ? 'called' : ''}`}
-                  >
-                    {item.display}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-	  
-	  
-	  
-	  <div style={{background: '#333', padding: '10px', margin: '10px', borderRadius: '5px', fontSize: '12px'}}>
-
-  <div>location.state: {location.state ? 'YES' : 'NO'}</div>
-  <div>selectedCartelas length: {selectedCartelas.length}</div>
-  <div>localStorage: {localStorage.getItem('userCartelas') ? 'YES' : 'NO'}</div>
-</div>
-    );
+  const calledMap = new Set(calledNumbers);
+  
+  const columns = {
+    B: { numbers: [], range: [1, 15] },
+    I: { numbers: [], range: [16, 30] },
+    N: { numbers: [], range: [31, 45] },
+    G: { numbers: [], range: [46, 60] },
+    O: { numbers: [], range: [61, 75] }
   };
+  
+  for (let col in columns) {
+    const [min, max] = columns[col].range;
+    for (let i = min; i <= max; i++) {
+      columns[col].numbers.push({
+        number: i,
+        called: calledMap.has(i),
+        display: `${col}${i}`
+      });
+    }
+  }
+  
+  return (
+    <div className="bingo-board-full">
+      <h3>🎯 Called Numbers Board</h3>
+      <div className="bingo-columns">
+        {Object.entries(columns).map(([letter, data]) => (
+          <div key={letter} className="bingo-column-full">
+            <div className="column-header">{letter}</div>
+            <div className="column-numbers-full">
+              {data.numbers.map((item) => (
+                <div
+                  key={item.number}
+                  className={`bingo-number ${item.called ? 'called' : ''}`}
+                >
+                  {item.display}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
   const renderRecentCalls = () => {
     const recentCalls = [...calledNumbersWithLetters].reverse().slice(0, 12);
