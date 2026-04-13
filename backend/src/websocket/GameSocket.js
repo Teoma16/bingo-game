@@ -232,60 +232,106 @@ class GameSocket {
       socket.emit('cartela-deselected-success', { luckyNumber });
     }
   }
-async handleAutoMark(socket, { userId, number }) {
-  console.log(`🤖 AUTO-MARK received: User ${userId}, Number ${number}`);
+async handleAutoMark(socket, { userId, gameId, number }) {
+  console.log(`🤖 Auto-mark: User ${userId} marking number ${number}`);
   
-  let found = false;
-  for (const [socketId, player] of this.players) {
-    if (player.userId === userId) {
-      if (!player.markedNumbers) {
-        player.markedNumbers = [];
+  try {
+    // Find the game player
+    const gamePlayer = await GamePlayer.findOne({
+      where: { 
+        game_id: gameId, 
+        user_id: userId 
       }
-      if (!player.markedNumbers.includes(number)) {
-        player.markedNumbers.push(number);
-        console.log(`✅ Stored in memory: User ${userId} now has ${player.markedNumbers.length} marked numbers`);
-      } else {
-        console.log(`⚠️ Number ${number} already marked for user ${userId}`);
-      }
-      found = true;
-      break;
+    });
+    
+    if (!gamePlayer) {
+      console.log(`❌ GamePlayer not found for user ${userId}, game ${gameId}`);
+      return;
     }
-  }
-  
-  if (!found) {
-    console.log(`❌ User ${userId} not found in players map`);
+    
+    // Get current marked numbers
+    let markedNumbers = gamePlayer.marked_numbers || [];
+    console.log(`[BEFORE] Marked numbers:`, markedNumbers);
+    
+    // Add new number if not already there
+    if (!markedNumbers.includes(number)) {
+      markedNumbers.push(number);
+      
+      // METHOD 1: Direct assignment and save
+      gamePlayer.marked_numbers = markedNumbers;
+      await gamePlayer.save();
+      
+      console.log(`[AFTER] Saved. Now has ${markedNumbers.length} numbers`);
+      
+      // METHOD 2: Also try using sequelize's update method as backup
+      await GamePlayer.update(
+        { marked_numbers: markedNumbers },
+        { where: { id: gamePlayer.id } }
+      );
+      
+      console.log(`[AFTER] Updated with sequelize.update`);
+    }
+    
+    // Verify by fetching fresh from database
+    const verifyPlayer = await GamePlayer.findOne({
+      where: { id: gamePlayer.id },
+      raw: true
+    });
+    console.log(`[VERIFY] Database now shows:`, verifyPlayer?.marked_numbers);
+    
+  } catch (error) {
+    console.error('Auto-mark error:', error);
   }
 }
 
-  async checkForWinners() {
-    for (const [socketId, player] of this.players) {
-      const marked = player.markedNumbers || [];
-      if (marked.length === 0) continue;
+async checkForWinners(calledNumber, callCount) {
+  console.log(`\n🎯 CALL #${callCount}: ${calledNumber}`);
+  
+  try {
+    const gamePlayers = await GamePlayer.findAll({
+      where: { game_id: this.currentGame.id }
+    });
+    
+    console.log(`Total players: ${gamePlayers.length}`);
+    
+    for (const gamePlayer of gamePlayers) {
+      let markedNumbers = gamePlayer.marked_numbers || [];
       
-      for (const luckyNumber of player.cartelaIds) {
-        const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
-        if (!cartela) continue;
+      if (!markedNumbers.includes(calledNumber)) {
+        markedNumbers.push(calledNumber);
         
-        // Get all numbers (excluding FREE)
-        const allNumbers = [
-          cartela.card_data.B[0], cartela.card_data.B[1], cartela.card_data.B[2], cartela.card_data.B[3], cartela.card_data.B[4],
-          cartela.card_data.I[0], cartela.card_data.I[1], cartela.card_data.I[2], cartela.card_data.I[3], cartela.card_data.I[4],
-          cartela.card_data.N[0], cartela.card_data.N[1], cartela.card_data.N[3], cartela.card_data.N[4],
-          cartela.card_data.G[0], cartela.card_data.G[1], cartela.card_data.G[2], cartela.card_data.G[3], cartela.card_data.G[4],
-          cartela.card_data.O[0], cartela.card_data.O[1], cartela.card_data.O[2], cartela.card_data.O[3], cartela.card_data.O[4]
-        ].filter(n => n !== 'FREE');
+        // Use both save methods
+        gamePlayer.marked_numbers = markedNumbers;
+        await gamePlayer.save();
+        await GamePlayer.update(
+          { marked_numbers: markedNumbers },
+          { where: { id: gamePlayer.id } }
+        );
         
-        const allMarked = allNumbers.every(num => marked.includes(num));
+        console.log(`✅ Player ${gamePlayer.user_id} - Added ${calledNumber}`);
+        console.log(`   Now has ${markedNumbers.length} numbers: [${markedNumbers.join(', ')}]`);
+      }
+      
+      // Check for win...
+      for (const luckyNumber of gamePlayer.cartela_ids) {
+        const cartela = await Cartela.findOne({ 
+          where: { lucky_number: luckyNumber }
+        });
         
-        if (allMarked) {
-          console.log(`🏆 WINNER! Player ${player.userId} with cartela ${luckyNumber}`);
-          await this.processWin(player.userId);
-          return true;
+        if (cartela) {
+          const hasWon = this.gameService.checkWinPattern(cartela.card_data, markedNumbers);
+          if (hasWon) {
+            console.log(`🏆 WINNER! Player ${gamePlayer.user_id}`);
+            await this.processWin(gamePlayer.user_id);
+            return;
+          }
         }
       }
     }
-    return false;
+  } catch (error) {
+    console.error('Error checking winners:', error);
   }
+}
 
   async handlePressBingo(socket, { userId }) {
     console.log(`🔴 Manual BINGO from user ${userId}`);
@@ -376,140 +422,190 @@ async handleAutoMark(socket, { userId, number }) {
     }, 1000);
   }
 
-  async startGame() {
-    console.log(`🎯 GAME STARTED! Prize pool: ${this.currentGame.prize_pool}`);
-    
-    this.currentGame.status = 'active';
-    this.currentGame.start_time = new Date();
-    this.currentGame.total_players = this.getUniquePlayerCount();
-    await this.currentGame.save();
-    
-   // this.io.emit('game-started', {
-		const gameStartedData = {
-      gameId: this.currentGame.id,
-      gameNumber: this.currentGame.game_number,
-      prizePool: this.currentGame.prize_pool,
-      winnerAmount: this.currentGame.prize_pool * 0.81,
-      message: 'Game Started!'
-    };
-    console.log('🔴🔴🔴 EMITTING GAME-STARTED EVENT:', gameStartedData);
-  this.io.emit('game-started', gameStartedData);
-    this.callNumbers();
+async startGame() {
+  // Refresh game data
+  this.currentGame = await Game.findByPk(this.currentGame.id);
+  
+  const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
+  console.log(`Starting game with prize pool: ${currentPrizePool}`);
+  
+  const playerCount = this.getUniquePlayerCount();
+  if (playerCount < 2) {
+    this.startWaitingPeriod();
+    return;
   }
+  
+  // Deduct fees from all players
+  for (const [socketId, player] of this.players) {
+    if (player.cartelaIds.length > 0) {
+      const user = await User.findByPk(player.userId);
+      if (user && user.wallet_balance >= player.cartelaIds.length * 10) {
+        const totalAmount = player.cartelaIds.length * 10;
+        const oldBalance = parseFloat(user.wallet_balance) || 0;
+        const newBalance = oldBalance - totalAmount;  // Subtraction, not string concatenation
+        
+        user.wallet_balance = newBalance;
+        await user.save();
+        
+        await Transaction.create({
+          user_id: player.userId,
+          type: 'game_fee',
+          amount: -totalAmount,
+          balance_after: newBalance,
+          status: 'completed',
+          description: `Game entry fee for ${player.cartelaIds.length} cartela(s)`
+        });
+      }
+    }
+  }
+  
+  this.currentGame.status = 'active';
+  this.currentGame.start_time = new Date();
+  this.currentGame.total_players = this.getUniquePlayerCount();
+  this.currentGame.commission = currentPrizePool * 0.19;
+  await this.currentGame.save();
+  
+  const winnerAmount = Math.round((currentPrizePool * 0.81) * 1);
+  
+  console.log(`✅ Game started! Prize pool: ${currentPrizePool}, Winner gets: ${winnerAmount}`);
+  
+  this.io.emit('game-started', {
+    gameId: this.currentGame.id,
+    gameNumber: this.currentGame.game_number,
+    prizePool: currentPrizePool,
+    winnerAmount: winnerAmount,
+    message: 'Game Started!'
+  });
+  
+  this.callNumbers();
+}
 
   callNumbers() {
-  const allNumbers = [];
-  for (let i = 1; i <= 75; i++) allNumbers.push(i);
-  
-  const calledNumbers = [];
-  let callCount = 0;
-  
-  this.gameInterval = setInterval(async () => {
-    if (!this.currentGame || this.currentGame.status !== 'active') {
-      clearInterval(this.gameInterval);
-      return;
-    }
+    const allNumbers = [];
+    for (let i = 1; i <= 75; i++) allNumbers.push(i);
     
-    const availableNumbers = allNumbers.filter(n => !calledNumbers.includes(n));
+    const calledNumbers = [];
+    let callCount = 0;
     
-    if (availableNumbers.length === 0) {
-      clearInterval(this.gameInterval);
-      this.io.emit('game-ended', { message: 'Game ended - No winner!' });
-      setTimeout(() => this.startNewGame(), 5000);
-      return;
-    }
-    
-    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-    const calledNumber = availableNumbers[randomIndex];
-    calledNumbers.push(calledNumber);
-    callCount++;
-    
-    this.currentGame.called_numbers = calledNumbers;
-    await this.currentGame.save();
-    
-    console.log(`📢 CALL #${callCount}: ${calledNumber}`);
-    
-    this.io.emit('number-called', {
-      number: calledNumber,
-      calledNumbers: calledNumbers,
-      callCount: callCount
-    });
-    
-    // IMMEDIATE WINNER CHECK after each call
-    let winnerFound = false;
-    
-    for (const [socketId, player] of this.players) {
-      const marked = player.markedNumbers || [];
-      if (marked.length === 0) continue;
-      
-      for (const luckyNumber of player.cartelaIds) {
-        const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
-        if (!cartela) continue;
-        
-        const allCartelaNumbers = [
-          ...cartela.card_data.B,
-          ...cartela.card_data.I,
-          ...cartela.card_data.N,
-          ...cartela.card_data.G,
-          ...cartela.card_data.O
-        ].filter(n => n !== 'FREE');
-        
-        const allMarked = allCartelaNumbers.every(num => marked.includes(num));
-        
-        if (allMarked) {
-          console.log(`🏆🏆🏆 WINNER FOUND at call ${callCount}! Player ${player.userId} 🏆🏆🏆`);
-          winnerFound = true;
-          await this.processWin(player.userId);
-          break;
-        }
+    this.gameInterval = setInterval(async () => {
+      if (!this.currentGame || this.currentGame.status !== 'active') {
+        clearInterval(this.gameInterval);
+        return;
       }
-      if (winnerFound) break;
-    }
-    
-    if (winnerFound) {
-      clearInterval(this.gameInterval);
-    }
-    
-  }, 4000);
-}  // <-- Make sure this closing bracket is here
+      
+      const availableNumbers = allNumbers.filter(n => !calledNumbers.includes(n));
+      
+      if (availableNumbers.length === 0) {
+        clearInterval(this.gameInterval);
+        this.io.emit('game-ended', { message: 'Game ended - No winner!' });
+        setTimeout(() => this.startNewGame(), 5000);
+        return;
+      }
+      
+      const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+      const calledNumber = availableNumbers[randomIndex];
+      calledNumbers.push(calledNumber);
+      callCount++;
+      
+      this.currentGame.called_numbers = calledNumbers;
+      await this.currentGame.save();
+      
+      console.log(`📢 CALL #${callCount}: ${calledNumber}`);
+      
+      this.io.emit('number-called', {
+        number: calledNumber,
+        calledNumbers: calledNumbers,
+        callCount: callCount
+      });
+      
+      const hasWinner = await this.checkForWinners();
+      if (hasWinner) {
+        clearInterval(this.gameInterval);
+      }
+      
+    }, 4000);
+  }
 
   async processWin(winnerId) {
-    console.log(`🏆🏆🏆 WINNER! User ${winnerId} 🏆🏆🏆`);
-    
-    if (this.gameInterval) {
-      clearInterval(this.gameInterval);
-      this.gameInterval = null;
-    }
-    
-    const prizePoolNum = parseFloat(this.currentGame.prize_pool) || 0;
-    const totalPrize = (prizePoolNum * 81) / 100;
-    const roundedPrize = Math.round(totalPrize * 100) / 100;
-    
-    const user = await User.findByPk(winnerId);
-    const winnerName = user?.username || user?.phone_number || `Player ${winnerId}`;
-    
-    if (user) {
-      user.wallet_balance = parseFloat(user.wallet_balance) + roundedPrize;
-      user.total_won += 1;
-      await user.save();
-    }
-    
-    this.currentGame.status = 'completed';
-    this.currentGame.winner_ids = [winnerId];
-    this.currentGame.winner_amount = roundedPrize;
-    this.currentGame.end_time = new Date();
-    await this.currentGame.save();
-    
-    this.io.emit('game-ended', {
-      winners: [{ userId: winnerId, username: winnerName, amount: roundedPrize }],
-      prizeAmount: roundedPrize,
-      message: `🎉 BINGO! ${winnerName} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
-    });
-    
-    setTimeout(() => {
-      this.startNewGame();
-    }, 5000);
+  console.log(`\n🏆🏆🏆 PROCESSING WINNER - User ${winnerId} 🏆🏆🏆`);
+  
+  if (this.gameInterval) {
+    clearInterval(this.gameInterval);
+    this.gameInterval = null;
   }
+  
+  // Get fresh game data
+  const freshGame = await Game.findByPk(this.currentGame.id);
+  const prizePoolNum = parseFloat(freshGame.prize_pool) || 0;
+  
+  // Calculate prize (81% of prize pool)
+  const totalPrize = (prizePoolNum * 81) / 100;
+  const roundedPrize = Math.round(totalPrize * 100) / 100;
+  
+  console.log(`💰 Prize pool: ${prizePoolNum}, Winner gets: ${roundedPrize}`);
+  
+  if (roundedPrize <= 0) {
+    console.log(`⚠️ Prize amount is zero or negative`);
+    this.io.emit('game-ended', {
+      winners: [],
+      prizeAmount: 0,
+      message: `Game ended - No valid prize amount!`
+    });
+    setTimeout(() => this.startNewGame(), 5000);
+    return;
+  }
+  
+  // Credit the winner - FIX: Use proper number addition, not string concatenation
+  const user = await User.findByPk(winnerId);
+  if (user) {
+    const oldBalance = parseFloat(user.wallet_balance) || 0;
+    const newBalance = oldBalance + roundedPrize;  // This adds numbers, not strings!
+    
+    console.log(`💰 Old balance: ${oldBalance}, Adding: ${roundedPrize}, New balance: ${newBalance}`);
+    
+    user.wallet_balance = newBalance;
+    user.total_won = (user.total_won || 0) + 1;
+    await user.save();
+    
+    await Transaction.create({
+      user_id: winnerId,
+      type: 'prize',
+      amount: roundedPrize,
+      balance_after: newBalance,
+      status: 'completed',
+      description: `Won ${roundedPrize} Birr from game #${freshGame.game_number}`
+    });
+  }
+  
+  // Update game player record
+  await GamePlayer.update(
+    { is_winner: true, prize_amount: roundedPrize },
+    { where: { game_id: freshGame.id, user_id: winnerId } }
+  );
+  
+  // Update game record
+  freshGame.status = 'completed';
+  freshGame.winner_ids = [winnerId];
+  freshGame.winner_amount = roundedPrize;
+  freshGame.end_time = new Date();
+  await freshGame.save();
+  
+  // Update current game reference
+  this.currentGame = freshGame;
+  
+  // Announce winner
+  this.io.emit('game-ended', {
+    winners: [{ userId: winnerId, amount: roundedPrize }],
+    prizeAmount: roundedPrize,
+    message: `🎉 BINGO! ${user?.username || 'Player'} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
+  });
+  
+  // Start next game after 5 seconds
+  setTimeout(() => {
+    console.log('Starting next game...');
+    this.startNewGame();
+  }, 5000);
+}
 
   getUniquePlayerCount() {
     const uniqueUsers = new Set();
