@@ -398,50 +398,44 @@ async handleAutoMark(socket, { userId, number }) {
   }
 
   callNumbers() {
-    const allNumbers = [];
-    for (let i = 1; i <= 75; i++) allNumbers.push(i);
+  const allNumbers = [];
+  for (let i = 1; i <= 75; i++) allNumbers.push(i);
+  
+  const calledNumbers = [];
+  let callCount = 0;
+  
+  this.gameInterval = setInterval(async () => {
+    if (!this.currentGame || this.currentGame.status !== 'active') {
+      clearInterval(this.gameInterval);
+      return;
+    }
     
-    const calledNumbers = [];
-    let callCount = 0;
+    const availableNumbers = allNumbers.filter(n => !calledNumbers.includes(n));
     
-    this.gameInterval = setInterval(async () => {
-      if (!this.currentGame || this.currentGame.status !== 'active') {
-        clearInterval(this.gameInterval);
-        return;
-      }
-      
-      const availableNumbers = allNumbers.filter(n => !calledNumbers.includes(n));
-      
-      if (availableNumbers.length === 0) {
-        clearInterval(this.gameInterval);
-        this.io.emit('game-ended', { message: 'Game ended - No winner!' });
-        setTimeout(() => this.startNewGame(), 5000);
-        return;
-      }
-      
-      const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-      const calledNumber = availableNumbers[randomIndex];
-      calledNumbers.push(calledNumber);
-      callCount++;
-      
-      this.currentGame.called_numbers = calledNumbers;
-      await this.currentGame.save();
-      
-      console.log(`📢 CALL #${callCount}: ${calledNumber}`);
-      
-      this.io.emit('number-called', {
-        number: calledNumber,
-        calledNumbers: calledNumbers,
-        callCount: callCount
-      });
-      /*
-      const hasWinner = await this.checkForWinners();
-      if (hasWinner) {
-        clearInterval(this.gameInterval);
-      }
-      
-    }, 4000);*/
-	 // IMMEDIATE WINNER CHECK after each call
+    if (availableNumbers.length === 0) {
+      clearInterval(this.gameInterval);
+      this.io.emit('game-ended', { message: 'Game ended - No winner!' });
+      setTimeout(() => this.startNewGame(), 5000);
+      return;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+    const calledNumber = availableNumbers[randomIndex];
+    calledNumbers.push(calledNumber);
+    callCount++;
+    
+    this.currentGame.called_numbers = calledNumbers;
+    await this.currentGame.save();
+    
+    console.log(`📢 CALL #${callCount}: ${calledNumber}`);
+    
+    this.io.emit('number-called', {
+      number: calledNumber,
+      calledNumbers: calledNumbers,
+      callCount: callCount
+    });
+    
+    // IMMEDIATE WINNER CHECK after each call
     let winnerFound = false;
     
     for (const [socketId, player] of this.players) {
@@ -452,7 +446,6 @@ async handleAutoMark(socket, { userId, number }) {
         const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
         if (!cartela) continue;
         
-        // Get all numbers in this cartela
         const allCartelaNumbers = [
           ...cartela.card_data.B,
           ...cartela.card_data.I,
@@ -461,7 +454,6 @@ async handleAutoMark(socket, { userId, number }) {
           ...cartela.card_data.O
         ].filter(n => n !== 'FREE');
         
-        // Check if ALL numbers are marked
         const allMarked = allCartelaNumbers.every(num => marked.includes(num));
         
         if (allMarked) {
@@ -479,7 +471,7 @@ async handleAutoMark(socket, { userId, number }) {
     }
     
   }, 4000);
-  }
+}  // <-- Make sure this closing bracket is here
 
   async processWin(winnerId) {
     console.log(`🏆🏆🏆 WINNER! User ${winnerId} 🏆🏆🏆`);

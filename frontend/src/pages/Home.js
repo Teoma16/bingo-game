@@ -239,10 +239,8 @@ const handleWithdraw = async () => {
     fetchAdvertisement();
     
     // Initialize WebSocket
- // Remove the complex options and use simple connection
-const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
-  withCredentials: true,  // Add this
-  transports: ['websocket', 'polling']
+const newSocket = io('ws://bingo-game-production-dd0b.up.railway.app', {
+  transports: ['websocket']
 });
 
 newSocket.on('connect', () => {
