@@ -166,14 +166,14 @@ const handleWithdraw = async () => {
   };
 
   // Handle number click - Select or Deselect
- const handleNumberClick = async (number) => {
+  const handleNumberClick = async (number) => {
   if (gameStatus !== 'waiting') {
     toast.error('Game already started! Please wait for next game.');
     return;
   }
   
   if (selectedNumbers.includes(number)) {
-    // DESELECT
+    // DESELECT - This is YOUR selected number
     if (socket) {
       socket.emit('deselect-cartela', {
         luckyNumber: number,
@@ -181,14 +181,11 @@ const handleWithdraw = async () => {
       });
     }
     setSelectedNumbers(prev => prev.filter(n => n !== number));
-    setSelectedCartelas(prev => {
-      const newCartelas = prev.filter(c => c.lucky_number !== number);
-      localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
-      return newCartelas;
-    });
+    setSelectedCartelas(prev => prev.filter(c => c.lucky_number !== number));
     toast(`Cartela ${number} deselected`);
   } else {
-    // SELECT
+    // SELECT - This is a new number
+    // Check if number is taken by another player
     if (takenNumbers.includes(number)) {
       toast.error('This lucky number is already taken by another player!');
       return;
@@ -199,9 +196,8 @@ const handleWithdraw = async () => {
       return;
     }
     
-    const requiredBalance = (selectedNumbers.length + 1) * 10;
-    if (balance < requiredBalance) {
-      toast.error(`Insufficient balance! Need ${requiredBalance} Birr.`);
+    if (balance < (selectedNumbers.length + 1) * 10) {
+      toast.error(`Insufficient balance! Need ${(selectedNumbers.length + 1) * 10} Birr for ${selectedNumbers.length + 1} cartela(s).`);
       return;
     }
     
@@ -213,23 +209,12 @@ const handleWithdraw = async () => {
           userId: user.id
         });
       }
-      
       setSelectedNumbers(prev => [...prev, number]);
-      
-      const newCartela = {
+      setSelectedCartelas(prev => [...prev, {
         lucky_number: number,
         card_data: cartelaData.card_data
-      };
-      
-      setSelectedCartelas(prev => {
-        const newCartelas = [...prev, newCartela];
-        // CRITICAL: Save to localStorage immediately
-        localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
-        console.log('💾 Saved cartela to localStorage:', newCartelas);
-        return newCartelas;
-      });
-      
-      toast.success(`Cartela ${number} selected!`);
+      }]);
+    // toast.success(`Cartela ${number} selected!`);
     }
   }
 };
@@ -239,21 +224,14 @@ const handleWithdraw = async () => {
     fetchAdvertisement();
     
     // Initialize WebSocket
- // Remove the complex options and use simple connection
-const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
+
+    
+	const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
   withCredentials: true,  // Add this
   transports: ['websocket']
 });
-
-newSocket.on('connect', () => {
-  console.log('✅ WebSocket connected successfully!');
-});
-
-newSocket.on('connect_error', (error) => {
-  console.log('❌ WebSocket connection error:', error);
-});
+	   // const newSocket = io('https://bingo-game-production-dd0b.up.railway.app');
     setSocket(newSocket);
-    
     // Generate lucky numbers 1-100
     const numbers = Array.from({ length: 100 }, (_, i) => i + 1);
     setLuckyNumbers(numbers);
@@ -332,22 +310,20 @@ newSocket.on('game-state', (data) => {
     });
     
   // In your game-started event listener
+// In your game-started event listener
 newSocket.on('game-started', (data) => {
-  console.log('🎮 GAME STARTED - Preparing navigation');
+  console.log('Game started! Prize pool:', data.prizePool);
+  console.log('Selected cartelas before navigate:', selectedCartelas);
   
-  // Get cartelas from state or localStorage
-  let cartelasToSend = selectedCartelas;
-  if (cartelasToSend.length === 0) {
-    const saved = localStorage.getItem('userCartelas');
-    if (saved) {
-      cartelasToSend = JSON.parse(saved);
-      console.log('📋 Retrieved cartelas from localStorage:', cartelasToSend);
-    }
+  // Calculate winner amount from prize pool
+  const winnerAmt = (data.prizePool || 0) * 0.81;
+  
+  // Make sure cartelas are saved to localStorage before navigating
+  if (selectedCartelas.length > 0) {
+    localStorage.setItem('userCartelas', JSON.stringify(selectedCartelas));
   }
   
-  console.log('📋 Sending cartelas to GameRoom:', cartelasToSend.length);
-  
-  const winnerAmt = (data.prizePool || 0) * 0.81;
+  toast.success(data.message);
   
   navigate(`/game/${user.id}`, { 
     state: { 
@@ -355,7 +331,7 @@ newSocket.on('game-started', (data) => {
       gameNumber: data.gameNumber,
       prizePool: data.prizePool,
       winnerAmount: winnerAmt,
-      selectedCartelas: cartelasToSend 
+      selectedCartelas: selectedCartelas 
     } 
   });
 });

@@ -82,7 +82,11 @@ const GameRoom = ({ user }) => {
   };
 
   useEffect(() => {
-    const newSocket = io(API_URL);
+      
+	const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
+  withCredentials: true,  // Add this
+  transports: ['websocket']
+});
     setSocket(newSocket);
     
     if (user && user.id) {
