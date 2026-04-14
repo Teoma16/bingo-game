@@ -21,7 +21,7 @@
   left:0;
   right:0;
   align-items: center;
-  background: #301934;
+  background: #4d4d4d;
   padding-left:35%;
 padding-top:4px;
 padding-bottom:6px;
@@ -79,10 +79,10 @@ padding-bottom:6px;
 }
 
 .lucky-numbers-grid {
-  background: #000;
-  border-radius: 15px;
-  padding: 5px;
-  margin-bottom: 80px;
+  background: #1e1e1e;
+  /*border-radius: 15px;*/
+  padding: 2px;
+  margin-bottom: 70px;
 }
 
 .lucky-numbers-grid h2 {

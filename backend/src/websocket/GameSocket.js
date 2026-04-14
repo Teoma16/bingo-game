@@ -491,11 +491,11 @@ async handleAutoMark(socket, { userId, number }) {
         await this.startGame();
       } 
       else if (waitingTime <= 0 && playerCount < 2 && !isGameStarting) {
-        console.log(`Not enough players (${playerCount}/2). Resetting...`);
+        console.log(`Not enough players /*(${playerCount}/2)*/. Resetting...`);
         waitingTime = 35;
         this.io.emit('game-waiting', {
           prepareTime: waitingTime,
-          message: `Not enough players (${playerCount}/2). Waiting...`
+          message: `Not enough players /*(${playerCount}/2)*/. Waiting...`
         });
       }
     }, 1000);
