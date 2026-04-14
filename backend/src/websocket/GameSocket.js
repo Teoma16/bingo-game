@@ -48,6 +48,9 @@ class GameSocket {
       socket.on('get-game-state', async () => {
         await this.sendGameState(socket);
       });
+	  socket.on('test-auto-mark', async (data) => {
+  console.log('🧪 TEST AUTO-MARK RECEIVED:', data);
+});
 	  // Add this test endpoint
 socket.on('test-mark', async (data) => {
   console.log('🧪 TEST MARK:', data);

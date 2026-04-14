@@ -353,6 +353,12 @@ console.log('   location.state?.gameId:', location.state?.gameId);
 }}>
   TEST MARK NUMBER 1
 </button>
+<button onClick={() => {
+  console.log('🧪 Sending test auto-mark');
+  socket.emit('test-auto-mark', { userId: user.id, number: 99 });
+}}>
+  TEST AUTO-MARK
+</button>
         </div>
       </div>
       
