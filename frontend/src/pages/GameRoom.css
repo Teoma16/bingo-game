@@ -109,7 +109,7 @@
 
 .cartelas-section {
   flex: 2;
-  min-width: 300px;
+  max-width: 150px;
 }
 
 .cartelas-section h3 {
@@ -119,8 +119,9 @@
 
 .cartelas-container {
   display: flex;
-  gap: 20px;
+  /*gap: 20px;*/
   flex-wrap: wrap;
+   max-width: 150px;
 }
 
 .game-cartela {
@@ -177,10 +178,10 @@
 
 .called-numbers-section {
   flex: 1;
-  min-width: 280px;
+  max-width: 180px;
   background: rgba(0, 0, 0, 0.8);
   border-radius: 10px;
-  padding: 15px;
+  padding: 1px;
   border: 1px solid #ffd700;
 }
 
@@ -765,7 +766,7 @@
 }
 
 .winning-modal-cell {
-  background: #1a1a1a;
+  background: #6d3800;
   color: #fff;
 }
 
