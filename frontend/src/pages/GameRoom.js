@@ -131,7 +131,7 @@ const [winningCells, setWinningCells] = useState([]);
       
       if (data.winners && data.winners.length > 0 && data.winners[0].userId === user?.id) {
         setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 5000);
+        setTimeout(() => setShowConfetti(false), 9000);
       }
       
       if (data.winners && data.winners.length > 0) {
@@ -146,6 +146,18 @@ const [winningCells, setWinningCells] = useState([]);
         setShowWinnerModal(true);
       }
       
+	   if (winnerData.cartela) {
+      console.log('🎯 Received winning cartela:', winnerData.cartela);
+      setWinningCartelaData(winnerData.cartela);
+      setWinningCells(winnerData.winningCells || []);
+    } else {
+      console.log('⚠️ No winning cartela data received');
+    }
+    
+    setShowWinnerModal(true);
+  }
+	  
+	  
       setGameActive(false);
       localStorage.removeItem('userCartelas');
     });

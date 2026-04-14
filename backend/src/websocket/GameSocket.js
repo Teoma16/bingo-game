@@ -1006,17 +1006,19 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
     if (player.userId === winnerId) {
       const marked = player.markedNumbers || [];
       
-      for (const luckyNumber of player.cartelaIds) {
+   for (const luckyNumber of player.cartelaIds) {
         const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
         if (cartela) {
-          // Find which pattern won
-          const winningCells = this.findWinningPattern(cartela.card_data, marked);
-          if (winningCells.length > 0) {
+          // Check if this cartela has a winning pattern
+          const hasWon = this.checkAllWinPatterns(cartela.card_data, marked);
+          if (hasWon) {
+            // Find which pattern won
+            winningCellsInfo = this.findWinningPatternCells(cartela.card_data, marked);
             winningCartelaInfo = {
               lucky_number: luckyNumber,
               card_data: cartela.card_data
             };
-            winningCellsInfo = winningCells;
+            console.log(`🎯 Winning cartela #${luckyNumber} with ${winningCellsInfo.length} winning cells`);
             break;
           }
         }
@@ -1067,10 +1069,10 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   // Start new game
   setTimeout(() => {
     this.startNewGame();
-  }, 5000);
+  }, 9000);
 }
 // Helper method to find winning pattern
-findWinningPattern(cartelaData, markedNumbers) {
+findWinningPatternCells(cartelaData, markedNumbers) {
   const grid = [];
   for (let row = 0; row < 5; row++) {
     grid.push([
