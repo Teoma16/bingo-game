@@ -330,27 +330,33 @@ const renderWinningCartela = (cardData, winningCells) => {
     return winningCells.some(cell => cell.row === row && cell.col === col);
   };
   
-  return (
-    <table className="winning-cartela-table">
-      <thead>
-        <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
-      </thead>
-      <tbody>
-        {grid.map((row, rowIndex) => (
-          <tr key={rowIndex}>
-            {row.map((cell, colIndex) => (
-              <td 
-                key={colIndex} 
-                className={`winning-modal-cell ${isWinningCell(rowIndex, colIndex) ? 'winning-highlight' : ''} ${cell === 'FREE' ? 'free-space' : ''}`}
-              >
-                {cell === 'FREE' ? '⭐' : cell}
-              </table>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+ return (
+  <table className="winning-cartela-table">
+    <thead>
+      <tr>
+        <th>B</th>
+        <th>I</th>
+        <th>N</th>
+        <th>G</th>
+        <th>O</th>
+      </tr>
+    </thead>
+    <tbody>
+      {grid.map((row, rowIndex) => (
+        <tr key={rowIndex}>
+          {row.map((cell, colIndex) => (
+            <td 
+              key={colIndex} 
+              className={`winning-modal-cell ${isWinningCell(rowIndex, colIndex) ? 'winning-highlight' : ''} ${cell === 'FREE' ? 'free-space' : ''}`}
+            >
+              {cell === 'FREE' ? '⭐' : cell}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+);
 };
 
 
