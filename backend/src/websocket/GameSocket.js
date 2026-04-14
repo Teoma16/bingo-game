@@ -127,6 +127,7 @@ socket.on('test-mark', async (data) => {
       this.players.set(socket.id, {
         userId: user.id,
         cartelaIds: [],
+		cartela_ids: [],  // ADD THIS LINE
 		 markedNumbers: [],  // ADD THIS LINE
         socketId: socket.id
       });
@@ -243,7 +244,6 @@ async checkForWinnersManual(userId) {
     const newTotalCartelas = player.cartelaIds.length + 1;
     const totalCost = newTotalCartelas * 10;
     
-    // Convert balance to number
     const userBalance = parseFloat(user.wallet_balance) || 0;
     
     if (userBalance < totalCost) {
@@ -259,9 +259,10 @@ async checkForWinnersManual(userId) {
       return;
     }
     
+    // Add to both cartelaIds and cartela_ids (for compatibility)
     player.cartelaIds.push(luckyNumber);
+    player.cartela_ids = player.cartelaIds;  // ADD THIS LINE - FIXES THE ERROR
     
-    // Ensure prize_pool is treated as number
     const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
     this.currentGame.prize_pool = currentPrizePool + 10;
     this.currentGame.total_cartelas = (this.currentGame.total_cartelas || 0) + 1;
@@ -270,7 +271,6 @@ async checkForWinnersManual(userId) {
     
     console.log(`[DEBUG] Prize pool: ${currentPrizePool} + 10 = ${this.currentGame.prize_pool}`);
     
-    // Create or update game player record
     let gamePlayer = await GamePlayer.findOne({
       where: { game_id: this.currentGame.id, user_id: userId }
     });
@@ -288,10 +288,8 @@ async checkForWinnersManual(userId) {
       });
     }
     
-    // Calculate winner amount as number
     const winnerAmount = (parseFloat(this.currentGame.prize_pool) * 0.81);
     
-    // Broadcast update to ALL players
     this.io.emit('game-update', {
       totalPlayers: this.getUniquePlayerCount(),
       totalCartelas: this.currentGame.total_cartelas,
@@ -311,10 +309,9 @@ async checkForWinnersManual(userId) {
       cartelaCount: player.cartelaIds.length,
       message: `Cartela ${luckyNumber} selected! (${player.cartelaIds.length}/2 cartelas)`
     });
-console.log(`[PRIZE DEBUG] Prize pool before: ${this.currentGame.prize_pool - 10}, after: ${this.currentGame.prize_pool}`);
-console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 0.81}`);
- 
-
+    
+    console.log(`[PRIZE DEBUG] Prize pool before: ${currentPrizePool}, after: ${this.currentGame.prize_pool}`);
+    console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 0.81}`);
  
   } catch (error) {
     console.error('Select cartela error:', error);
@@ -409,7 +406,7 @@ async handleAutoMark(socket, { userId, number }) {
       let hasWon = false;
       let winningCartela = null;
       
-      for (const luckyNumber of gamePlayer.cartela_ids) {
+      for (const luckyNumber of gamePlayer.cartelaIds) {
         const cartela = await Cartela.findOne({ 
           where: { lucky_number: luckyNumber }
         });
@@ -606,7 +603,7 @@ for (const [socketId, player] of this.players) {
   const marked = player.markedNumbers || [];
   if (marked.length < 5) continue;
   
-  for (const luckyNumber of player.cartela_ids) {
+  for (const luckyNumber of player.cartelaIds) {
     const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
     if (!cartela) continue;
     
