@@ -1,6 +1,6 @@
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  background: #3b444b;
   padding: 20px;
 }
 
@@ -21,7 +21,7 @@
   left:0;
   right:0;
   align-items: center;
-  background: #b0bec5;
+  background: #301934;
   padding-left:35%;
 padding-top:4px;
 padding-bottom:6px;
@@ -79,9 +79,9 @@ padding-bottom:6px;
 }
 
 .lucky-numbers-grid {
-  background: rgba(0, 0, 0, 0.6);
+  background: #000;
   border-radius: 15px;
-  padding: 10px;
+  padding: 5px;
   margin-bottom: 80px;
 }
 
@@ -98,12 +98,12 @@ padding-bottom:6px;
 }
 
 .lucky-number {
-  background: #2a2a2a;
+  background: #3b444b;
   color: #ffd700;
-  border: 0.5px solid #a78bfa;
+  border: 0.5px solid #414a4c;
   padding: 12px 5px;
   text-align: center;
-  border-radius: 2px;
+  /*border-radius: 2px;*/
   cursor: pointer;
   font-weight: bold;
 }
@@ -374,7 +374,7 @@ padding-bottom:6px;
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(15deg, #fbbf24, #d8b4fe, #934b00);
+  background:#36454F;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -633,39 +633,72 @@ padding-bottom:6px;
   padding: 40px;
   color: #888;
 }
-.lucky-number {
-  background: #2a2a2a;
+
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ffd700;
+}
+
+.modal-header h2 {
   color: #ffd700;
-  border: 1px solid #ffd700;
-  padding: 12px 5px;
-  text-align: center;
-  border-radius: 8px;
+  margin: 0;
+}
+
+.modal-close-x {
+  background: none;
+  border: none;
+  color: #ffd700;
+  font-size: 24px;
   cursor: pointer;
-  font-weight: bold;
-  transition: all 0.2s;
+  padding: 5px 10px;
+  transition: all 0.3s ease;
 }
 
-.lucky-number.selected {
-  background: #00ff00;
-  color: #000;
-  border-color: #00ff00;
+.modal-close-x:hover {
+  color: #ff4444;
+  transform: scale(1.1);
 }
 
-.lucky-number.taken {
-  background: #ff4444;
-  color: #fff;
-  border-color: #ff4444;
-  cursor: not-allowed;
-  opacity: 0.7;
+/* Remove the old modal-close-btn styles or update them */
+.modal-close-btn {
+  display: none;
 }
 
-.lucky-number:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.recent-winnings {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
 }
-/*
-.lucky-number:not(:disabled):hover {
-  transform: scale(1.05);
-  background: #ffd700;
-  color: #000;
-}*/
+
+.recent-winnings h3 {
+  color: #ffd700;
+  margin-bottom: 10px;
+}
+
+.winnings-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.winning-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: rgba(0, 255, 0, 0.1);
+  margin: 5px 0;
+  border-radius: 5px;
+  color: #00ff00;
+}
+
+.winning-date {
+  font-size: 12px;
+  color: #888;
+}

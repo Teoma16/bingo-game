@@ -506,48 +506,64 @@ newSocket.on('game-started', (data) => {
     </div>
     
     {/* BALANCE MODAL */}
-    {showBalanceModal && (
-      <div className="modal-overlay" onClick={() => setShowBalanceModal(false)}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>💰 Balance & Transactions</h2>
-          </div>
-          <div className="modal-body">
-            <div className="current-balance">
-              <h3>Current Balance</h3>
-              <p className="balance-amount">{balance} Birr</p>
-            </div>
-            <div className="transactions-list">
-              <h3>Transaction History</h3>
-              {transactions.length === 0 ? (
-                <p className="no-data">No transactions yet</p>
-              ) : (
-                <div className="transactions-table">
-                  <table>
-                    <thead>
-                      <tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map((tx, idx) => (
-                        <tr key={idx}>
-                          <td>{new Date(tx.created_at).toLocaleDateString()}</td>
-                          <td className={`tx-type-${tx.type}`}>{tx.type}</td>
-                          <td className={tx.amount >= 0 ? 'positive' : 'negative'}>{tx.amount >= 0 ? '+' : ''}{tx.amount} Birr</td>
-                          <td>{tx.status}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+{showBalanceModal && (
+  <div className="modal-overlay" onClick={() => setShowBalanceModal(false)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h2>💰 Balance & Transactions</h2>
+        <button className="modal-close-x" onClick={() => setShowBalanceModal(false)}>✕</button>
+      </div>
+      <div className="modal-body">
+        <div className="current-balance">
+          <h3>Current Balance</h3>
+          <p className="balance-amount">{balance} Birr</p>
+        </div>
+        
+        {/* Recent Winnings Section */}
+        <div className="recent-winnings">
+          <h3>🏆 Recent Winnings</h3>
+          {transactions.filter(tx => tx.type === 'prize').length === 0 ? (
+            <p className="no-data">No winnings yet</p>
+          ) : (
+            <div className="winnings-list">
+              {transactions.filter(tx => tx.type === 'prize').slice(0, 5).map((win, idx) => (
+                <div key={idx} className="winning-item">
+                  <span>🎉 +{win.amount} Birr</span>
+                  <span className="winning-date">{new Date(win.created_at).toLocaleDateString()}</span>
                 </div>
-              )}
+              ))}
             </div>
-          </div>
-          <button className="modal-close-btn" onClick={() => setShowBalanceModal(false)}>Close</button>
+          )}
+        </div>
+        
+        <div className="transactions-list">
+          <h3>Transaction History</h3>
+          {transactions.length === 0 ? (
+            <p className="no-data">No transactions yet</p>
+          ) : (
+            <div className="transactions-table">
+              <table>
+                <thead>
+                  <tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {transactions.map((tx, idx) => (
+                    <tr key={idx}>
+                      <td>{new Date(tx.created_at).toLocaleDateString()}</td>
+                      <td className={`tx-type-${tx.type}`}>{tx.type}</td>
+                      <td className={tx.amount >= 0 ? 'positive' : 'negative'}>{tx.amount >= 0 ? '+' : ''}{tx.amount} Birr</td>
+                      <td>{tx.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
-    )}
-    
-    {/* WITHDRAW MODAL */}
+    </div>
+  </div>
+)}
   {/* WITHDRAW MODAL */}
 {showWithdrawModal && (
   <div className="modal-overlay" onClick={() => {
@@ -558,7 +574,14 @@ newSocket.on('game-started', (data) => {
     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
       <div className="modal-header">
         <h2>💸 Withdraw Request</h2>
+        <button className="modal-close-x" onClick={() => {
+          setShowWithdrawModal(false);
+          setWithdrawAmount('');
+          setWithdrawPhone('');
+        }}>✕</button>
       </div>
+	  
+	  
       <div className="modal-body">
         <div className="current-balance">
           <p>Available Balance: <strong>{balance} Birr</strong></p>
@@ -608,7 +631,15 @@ newSocket.on('game-started', (data) => {
     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
       <div className="modal-header">
         <h2>📱 Deposit Money</h2>
+        <button className="modal-close-x" onClick={() => {
+          setShowDepositModal(false);
+          setDepositAmount(null);
+          setDepositSms('');
+        }}>✕</button>
       </div>
+	  
+	  
+	  
       <div className="modal-body">
         <div className="deposit-amounts">
           <p>Select Amount:</p>
@@ -647,13 +678,16 @@ newSocket.on('game-started', (data) => {
 )}
     
     {/* HISTORY MODAL */}
-    {showHistoryModal && (
-      <div className="modal-overlay" onClick={() => setShowHistoryModal(false)}>
-        <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>📜 Game History</h2>
-          </div>
-          <div className="modal-body">
+  {showHistoryModal && (
+  <div className="modal-overlay" onClick={() => setShowHistoryModal(false)}>
+    <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h2>📜 Game History</h2>
+        <button className="modal-close-x" onClick={() => setShowHistoryModal(false)}>✕</button>
+      </div>
+         
+
+		 <div className="modal-body">
             {gameHistory.length === 0 ? (
               <p className="no-data">No games played yet</p>
             ) : (
