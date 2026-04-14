@@ -557,47 +557,146 @@ async handleAutoMark(socket, { userId, number }) {
   }
 
   callNumbers() {
-    const allNumbers = [];
-    for (let i = 1; i <= 75; i++) allNumbers.push(i);
+  const allNumbers = [];
+  for (let i = 1; i <= 75; i++) allNumbers.push(i);
+  
+  const calledNumbers = [];
+  let callCount = 0;
+  
+  this.gameInterval = setInterval(async () => {
+    if (!this.currentGame || this.currentGame.status !== 'active') {
+      clearInterval(this.gameInterval);
+      return;
+    }
     
-    const calledNumbers = [];
-    let callCount = 0;
+    const availableNumbers = allNumbers.filter(n => !calledNumbers.includes(n));
     
-    this.gameInterval = setInterval(async () => {
-      if (this.currentGame.status !== 'active') {
-        clearInterval(this.gameInterval);
-        return;
+    if (availableNumbers.length === 0) {
+      clearInterval(this.gameInterval);
+      this.io.emit('game-ended', { message: 'Game ended - No winner!' });
+      setTimeout(() => this.startNewGame(), 5000);
+      return;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+    const calledNumber = availableNumbers[randomIndex];
+    calledNumbers.push(calledNumber);
+    callCount++;
+    
+    this.currentGame.called_numbers = calledNumbers;
+    await this.currentGame.save();
+    
+    console.log(`📢 CALL #${callCount}: ${calledNumber}`);
+    
+    this.io.emit('number-called', {
+      number: calledNumber,
+      calledNumbers: calledNumbers,
+      callCount: callCount
+    });
+    
+    // ========== WINNER CHECK - PUT THIS HERE ==========
+    let winnerFound = false;
+
+    for (const [socketId, player] of this.players) {
+      const marked = player.markedNumbers || [];
+      if (marked.length < 5) continue;
+      
+      for (const luckyNumber of player.cartela_ids) {
+        const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+        if (!cartela) continue;
+        
+        // Create grid
+        const grid = [];
+        for (let row = 0; row < 5; row++) {
+          grid.push([
+            cartela.card_data.B[row],
+            cartela.card_data.I[row],
+            cartela.card_data.N[row],
+            cartela.card_data.G[row],
+            cartela.card_data.O[row]
+          ]);
+        }
+        
+        const markedSet = new Set(marked);
+        markedSet.add('FREE');
+        
+        // Check HORIZONTAL lines (rows)
+        for (let row = 0; row < 5; row++) {
+          let rowComplete = true;
+          for (let col = 0; col < 5; col++) {
+            if (!markedSet.has(grid[row][col])) {
+              rowComplete = false;
+              break;
+            }
+          }
+          if (rowComplete) {
+            console.log(`🏆 HORIZONTAL BINGO! Player ${player.userId}, Row ${row + 1}`);
+            winnerFound = true;
+            await this.processWin(player.userId);
+            break;
+          }
+        }
+        if (winnerFound) break;
+        
+        // Check VERTICAL lines (columns)
+        for (let col = 0; col < 5; col++) {
+          let colComplete = true;
+          for (let row = 0; row < 5; row++) {
+            if (!markedSet.has(grid[row][col])) {
+              colComplete = false;
+              break;
+            }
+          }
+          if (colComplete) {
+            console.log(`🏆 VERTICAL BINGO! Player ${player.userId}, Column ${String.fromCharCode(66 + col)}`);
+            winnerFound = true;
+            await this.processWin(player.userId);
+            break;
+          }
+        }
+        if (winnerFound) break;
+        
+        // Check DIAGONAL (Top-Left to Bottom-Right)
+        let diag1Complete = true;
+        for (let i = 0; i < 5; i++) {
+          if (!markedSet.has(grid[i][i])) {
+            diag1Complete = false;
+            break;
+          }
+        }
+        if (diag1Complete) {
+          console.log(`🏆 DIAGONAL BINGO! Player ${player.userId} (TL-BR)`);
+          winnerFound = true;
+          await this.processWin(player.userId);
+          break;
+        }
+        if (winnerFound) break;
+        
+        // Check DIAGONAL (Top-Right to Bottom-Left)
+        let diag2Complete = true;
+        for (let i = 0; i < 5; i++) {
+          if (!markedSet.has(grid[i][4 - i])) {
+            diag2Complete = false;
+            break;
+          }
+        }
+        if (diag2Complete) {
+          console.log(`🏆 DIAGONAL BINGO! Player ${player.userId} (TR-BL)`);
+          winnerFound = true;
+          await this.processWin(player.userId);
+          break;
+        }
       }
-      
-      const availableNumbers = allNumbers.filter(n => !calledNumbers.includes(n));
-      
-      if (availableNumbers.length === 0 || callCount >= 75) {
-        clearInterval(this.gameInterval);
-        this.io.emit('game-ended', { message: 'Game ended - No winner!' });
-        setTimeout(() => this.startNewGame(), 5000);
-        return;
-      }
-      
-      const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-      const calledNumber = availableNumbers[randomIndex];
-      calledNumbers.push(calledNumber);
-      callCount++;
-      
-      this.currentGame.called_numbers = calledNumbers;
-      await this.currentGame.save();
-      
-      console.log(`Call #${callCount}: ${calledNumber}`);
-      
-      this.io.emit('number-called', {
-        number: calledNumber,
-        calledNumbers: calledNumbers,
-        callCount: callCount
-      });
-      
-      await this.checkForWinners(calledNumber, callCount);
-      
-    }, 4000);
-  }
+      if (winnerFound) break;
+    }
+
+    if (winnerFound) {
+      clearInterval(this.gameInterval);
+    }
+    // ========== END WINNER CHECK ==========
+    
+  }, 2000);
+}
 
  
 async checkForWinners(calledNumber, callCount) {
