@@ -369,12 +369,14 @@ console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 
 
 
 async handleAutoMark(socket, { userId, number }) {
-  // Store in memory only - NO DATABASE
+  console.log(`🤖 AUTO-MARK: User ${userId}, Number ${number}`);
+  
   for (const [socketId, player] of this.players) {
     if (player.userId === userId) {
       if (!player.markedNumbers.includes(number)) {
         player.markedNumbers.push(number);
-        console.log(`✅ Player ${userId} marked ${number} (${player.markedNumbers.length} total)`);
+        console.log(`   ✅ Now has ${player.markedNumbers.length} marked numbers`);
+        console.log(`   Marked: [${player.markedNumbers.join(', ')}]`);
       }
       break;
     }
@@ -752,7 +754,13 @@ checkLineWinSimple(cartelaData, markedNumbers) {
   
   const markedSet = new Set(markedNumbers);
   markedSet.add('FREE');
-  
+  // After creating markedSet, add this debug
+console.log(`🔍 Player ${player.userId} - Marked: ${marked.length} numbers`);
+console.log(`   Row 1: ${grid[0].map(c => markedSet.has(c) ? '✓' : c).join(' | ')}`);
+console.log(`   Row 2: ${grid[1].map(c => markedSet.has(c) ? '✓' : c).join(' | ')}`);
+console.log(`   Row 3: ${grid[2].map(c => markedSet.has(c) ? '✓' : c).join(' | ')}`);
+console.log(`   Row 4: ${grid[3].map(c => markedSet.has(c) ? '✓' : c).join(' | ')}`);
+console.log(`   Row 5: ${grid[4].map(c => markedSet.has(c) ? '✓' : c).join(' | ')}`);
   // Check rows
   for (let row = 0; row < 5; row++) {
     let rowComplete = true;
