@@ -998,6 +998,34 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
     this.gameInterval = null;
   }
   
+   // Find the winning cartela and pattern
+  let winningCartelaInfo = null;
+  let winningCellsInfo = [];
+  
+  for (const [socketId, player] of this.players) {
+    if (player.userId === winnerId) {
+      const marked = player.markedNumbers || [];
+      
+      for (const luckyNumber of player.cartelaIds) {
+        const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+        if (cartela) {
+          // Find which pattern won
+          const winningCells = this.findWinningPattern(cartela.card_data, marked);
+          if (winningCells.length > 0) {
+            winningCartelaInfo = {
+              lucky_number: luckyNumber,
+              card_data: cartela.card_data
+            };
+            winningCellsInfo = winningCells;
+            break;
+          }
+        }
+      }
+      break;
+    }
+  }
+  
+  
   // Calculate prize
   const prizePoolNum = parseFloat(this.currentGame.prize_pool) || 0;
   const totalPrize = (prizePoolNum * 81) / 100;
@@ -1005,6 +1033,8 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   
   // Credit winner in database
   const user = await User.findByPk(winnerId);
+  const winnerName = user?.username || user?.phone_number || `Player ${winnerId}`;
+  
   if (user) {
     user.wallet_balance = parseFloat(user.wallet_balance) + roundedPrize;
     user.total_won += 1;
@@ -1019,10 +1049,16 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   await this.currentGame.save();
   
   // Announce winner
-  this.io.emit('game-ended', {
-    winners: [{ userId: winnerId, amount: roundedPrize }],
+   this.io.emit('game-ended', {
+    winners: [{ 
+      userId: winnerId, 
+      username: winnerName, 
+      amount: roundedPrize,
+      cartela: winningCartelaInfo,
+      winningCells: winningCellsInfo
+    }],
     prizeAmount: roundedPrize,
-    message: `🎉 BINGO! Winner wins ${roundedPrize} Birr! 🎉`
+    message: `🎉 BINGO! ${winnerName} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
   });
   
   // Clear all player memory
@@ -1033,7 +1069,80 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
     this.startNewGame();
   }, 5000);
 }
-
+// Helper method to find winning pattern
+findWinningPattern(cartelaData, markedNumbers) {
+  const grid = [];
+  for (let row = 0; row < 5; row++) {
+    grid.push([
+      cartelaData.B[row],
+      cartelaData.I[row],
+      cartelaData.N[row],
+      cartelaData.G[row],
+      cartelaData.O[row]
+    ]);
+  }
+  
+  const markedSet = new Set(markedNumbers);
+  markedSet.add('FREE');
+  const winningCells = [];
+  
+  // Check rows
+  for (let row = 0; row < 5; row++) {
+    let complete = true;
+    for (let col = 0; col < 5; col++) {
+      if (!markedSet.has(grid[row][col])) {
+        complete = false;
+        break;
+      }
+    }
+    if (complete) {
+      for (let col = 0; col < 5; col++) winningCells.push({ row, col });
+      return winningCells;
+    }
+  }
+  
+  // Check columns
+  for (let col = 0; col < 5; col++) {
+    let complete = true;
+    for (let row = 0; row < 5; row++) {
+      if (!markedSet.has(grid[row][col])) {
+        complete = false;
+        break;
+      }
+    }
+    if (complete) {
+      for (let row = 0; row < 5; row++) winningCells.push({ row, col });
+      return winningCells;
+    }
+  }
+  
+  // Check diagonals
+  let diag1Complete = true;
+  for (let i = 0; i < 5; i++) {
+    if (!markedSet.has(grid[i][i])) {
+      diag1Complete = false;
+      break;
+    }
+  }
+  if (diag1Complete) {
+    for (let i = 0; i < 5; i++) winningCells.push({ row: i, col: i });
+    return winningCells;
+  }
+  
+  let diag2Complete = true;
+  for (let i = 0; i < 5; i++) {
+    if (!markedSet.has(grid[i][4 - i])) {
+      diag2Complete = false;
+      break;
+    }
+  }
+  if (diag2Complete) {
+    for (let i = 0; i < 5; i++) winningCells.push({ row: i, col: 4 - i });
+    return winningCells;
+  }
+  
+  return [];
+}
   getUniquePlayerCount() {
     const uniqueUsers = new Set();
     this.players.forEach(player => {

@@ -708,3 +708,75 @@
     font-size: 22px;
   }
 }
+
+.winning-cartela {
+  border: 3px solid #ffd700;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  animation: pulse 1s ease infinite;
+}
+
+.winning-cell {
+  background: #ffd700 !important;
+  color: #000 !important;
+  font-weight: bold;
+  transform: scale(1.05);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+.winner-modal.large-modal {
+  max-width: 600px;
+  width: 90%;
+}
+
+.winning-cartela-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+}
+
+.winning-cartela-section h3 {
+  color: #ffd700;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.winning-cartela-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+
+.winning-cartela-table th,
+.winning-cartela-table td {
+  border: 1px solid #ffd700;
+  padding: 10px;
+  text-align: center;
+  width: 50px;
+  height: 50px;
+}
+
+.winning-cartela-table th {
+  background: #ffd700;
+  color: #000;
+}
+
+.winning-modal-cell {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.winning-modal-cell.winning-highlight {
+  background: #ffd700 !important;
+  color: #000 !important;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+}
+
+.winning-modal-cell.free-space {
+  background: #00ff00;
+  color: #000;
+}

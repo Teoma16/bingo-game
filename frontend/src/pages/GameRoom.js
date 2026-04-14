@@ -27,6 +27,8 @@ const GameRoom = ({ user }) => {
   const [winner, setWinner] = useState(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [winningCartelaData, setWinningCartelaData] = useState(null);
+const [winningCells, setWinningCells] = useState([]);
 
   const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
 
@@ -136,7 +138,7 @@ const GameRoom = ({ user }) => {
         const winnerData = data.winners[0];
         setWinner({
           userId: winnerData.userId,
-          username: winnerData.username || `Player ${winnerData.userId}`,
+          username: winnerData.username,
           amount: winnerData.amount,
           totalAmount: winnerData.totalAmount || winnerData.amount,
           bonus: winnerData.bonus || 0
@@ -320,6 +322,40 @@ console.log('   location.state?.gameId:', location.state?.gameId);
     );
   };
 
+
+const renderWinningCartela = (cardData, winningCells) => {
+  const grid = convertToGrid(cardData);
+  
+  const isWinningCell = (row, col) => {
+    return winningCells.some(cell => cell.row === row && cell.col === col);
+  };
+  
+  return (
+    <table className="winning-cartela-table">
+      <thead>
+        <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+      </thead>
+      <tbody>
+        {grid.map((row, rowIndex) => (
+          <tr key={rowIndex}>
+            {row.map((cell, colIndex) => (
+              <td 
+                key={colIndex} 
+                className={`winning-modal-cell ${isWinningCell(rowIndex, colIndex) ? 'winning-highlight' : ''} ${cell === 'FREE' ? 'free-space' : ''}`}
+              >
+                {cell === 'FREE' ? '⭐' : cell}
+              </table>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
+
+
+
   return (
     <div className="game-room">
       <div className="game-header">
@@ -347,7 +383,7 @@ console.log('   location.state?.gameId:', location.state?.gameId);
           </button>
           <button className="bingo-button" onClick={handlePressBingo}>
             🎲 BINGO!
-</button>*/}
+</button>
 		  <button onClick={() => {
   socket.emit('test-mark', { userId: user.id, number: 1 });
 }}>
@@ -358,7 +394,7 @@ console.log('   location.state?.gameId:', location.state?.gameId);
   socket.emit('test-auto-mark', { userId: user.id, number: 99 });
 }}>
   TEST AUTO-MARK
-</button>
+</button>*/}
         </div>
       </div>
       
@@ -395,66 +431,62 @@ console.log('   location.state?.gameId:', location.state?.gameId);
           )}
         </div>
       </div>
-      <button 
-  className="debug-button" 
-  onClick={() => {
-    console.log('=== DEBUG: MANUAL WINNER CHECK ===');
-    console.log('Marked numbers:', markedNumbers);
-    console.log('Selected cartelas:', selectedCartelas);
-    socket.emit('force-check-winner', {
-      userId: user.id,
-      gameId: currentGameId || location.state?.gameId
-    });
-  }}
-  style={{background: 'red', color: 'white', marginLeft: '10px'}}
->
-  🔍 FORCE CHECK WINNER
-</button>
+ 
       {showConfetti && <Confetti />}
       {showWinnerModal && winner && (
-        <div className="winner-modal-overlay">
-          <div className="winner-modal">
-            <div className="winner-fireworks">
-              <div className="firework"></div>
-              <div className="firework"></div>
-              <div className="firework"></div>
-              <div className="firework"></div>
-              <div className="firework"></div>
-            </div>
-            
-            <div className="winner-content">
-              <div className="winner-trophy">🏆</div>
-              <h1 className="winner-title">BINGO!</h1>
-              
-              <div className="winner-announcement">
-                {winner.userId === user?.id ? (
-                  <>
-                    <p className="winner-congrats">🎉 CONGRATULATIONS! 🎉</p>
-                    <p className="winner-message">YOU ARE THE WINNER!</p>
-                    <div className="winner-amount">
-                      <span className="amount-label">YOU WON</span>
-                      <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="winner-congrats">🎉 BINGO! 🎉</p>
-                    <p className="winner-message">🏆 {winner.username} won the game! 🏆</p>
-                    <div className="winner-amount">
-                      <span className="amount-label">Prize Amount</span>
-                      <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>
-                    </div>
-                  </>
-                )}
+  <div className="winner-modal-overlay">
+    <div className="winner-modal large-modal">
+      <div className="winner-fireworks">
+        <div className="firework"></div>
+        <div className="firework"></div>
+        <div className="firework"></div>
+        <div className="firework"></div>
+        <div className="firework"></div>
+      </div>
+      
+      <div className="winner-content">
+        <div className="winner-trophy">🏆</div>
+        <h1 className="winner-title">BINGO!</h1>
+        
+        <div className="winner-announcement">
+          {winner.userId === user?.id ? (
+            <>
+              <p className="winner-congrats">🎉 CONGRATULATIONS! 🎉</p>
+              <p className="winner-message">YOU ARE THE WINNER!</p>
+              <div className="winner-amount">
+                <span className="amount-label">YOU WON</span>
+                <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>
               </div>
-              
-              <div className="winner-redirect">
-                Redirecting to home in 5 seconds...
+            </>
+          ) : (
+            <>
+              <p className="winner-congrats">🎉 BINGO! 🎉</p>
+              <p className="winner-message">🏆 {winner.username} won the game! 🏆</p>
+              <div className="winner-amount">
+                <span className="amount-label">Prize Amount</span>
+                <span className="amount-value">{winner.amount.toFixed(2)} Birr</span>
               </div>
+            </>
+          )}
+        </div>
+        
+        {/* Show winning cartela */}
+        {winningCartelaData && (
+          <div className="winning-cartela-section">
+            <h3>Winning Cartela #{winningCartelaData.lucky_number}</h3>
+            <div className="winning-cartela-preview">
+              {renderWinningCartela(winningCartelaData.card_data, winningCells)}
             </div>
           </div>
+        )}
+        
+        <div className="winner-redirect">
+          Redirecting to home in 5 seconds...
         </div>
-      )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
