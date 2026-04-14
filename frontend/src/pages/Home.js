@@ -56,12 +56,13 @@ const fetchTransactions = async () => {
     console.error('Failed to fetch transactions:', error);
   }
 };
-
 const fetchGameHistory = async () => {
   try {
+    console.log('Fetching game history for user:', user.id);
     const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/game-history/${user.id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
+    console.log('Game history response:', response.data);
     setGameHistory(response.data);
   } catch (error) {
     console.error('Failed to fetch game history:', error);
@@ -228,7 +229,7 @@ const handleWithdraw = async () => {
     setSocket(newSocket);
     
     // Generate lucky numbers 1-100
-    const numbers = Array.from({ length: 100 }, (_, i) => i + 1);
+    const numbers = Array.from({ length: 200 }, (_, i) => i + 1);
     setLuckyNumbers(numbers);
     
     // Register player

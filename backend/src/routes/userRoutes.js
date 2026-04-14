@@ -31,15 +31,16 @@ router.get('/transactions/:userId', authenticate, async (req, res) => {
 });
 
 // Get game history
+// Get game history
 router.get('/game-history/:userId', authenticate, async (req, res) => {
   try {
-    const { GamePlayer, Game } = require('../models');
     const gamePlayers = await GamePlayer.findAll({
       where: { user_id: req.params.userId },
       include: [{ model: Game, attributes: ['game_number', 'status', 'prize_pool'] }],
       order: [['joined_at', 'DESC']],
       limit: 50
     });
+    console.log(`Found ${gamePlayers.length} games for user ${req.params.userId}`);
     res.json(gamePlayers);
   } catch (error) {
     console.error('Game history error:', error);

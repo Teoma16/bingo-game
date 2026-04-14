@@ -435,6 +435,7 @@ padding-bottom:6px;
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;
+  position: relative;
 }
 
 .modal-content.large {
@@ -642,6 +643,10 @@ padding-bottom:6px;
   margin-bottom: 20px;
   padding-bottom: 10px;
   border-bottom: 1px solid #ffd700;
+  position: sticky;
+  top: 0;
+  background: inherit;
+  z-index: 10;
 }
 
 .modal-header h2 {
@@ -650,17 +655,22 @@ padding-bottom:6px;
 }
 
 .modal-close-x {
-  background: none;
+  background: #ff4444;
   border: none;
-  color: #ffd700;
-  font-size: 24px;
+  color: white;
+  font-size: 18px;
   cursor: pointer;
-  padding: 5px 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.3s ease;
 }
 
 .modal-close-x:hover {
-  color: #ff4444;
+  background: #cc0000;
   transform: scale(1.1);
 }
 

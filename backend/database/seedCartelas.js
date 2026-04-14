@@ -40,7 +40,7 @@ async function generateAllCartelas() {
     console.log('Cleared existing cartelas...');
     
     // Generate 100 unique cartelas
-    for (let i = 1; i <= 100; i++) {
+    for (let i = 1; i <= 200; i++) {
       const cartelaData = generateCartela();
       
       await Cartela.create({
