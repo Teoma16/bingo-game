@@ -143,8 +143,8 @@ const [winningCells, setWinningCells] = useState([]);
           totalAmount: winnerData.totalAmount || winnerData.amount,
           bonus: winnerData.bonus || 0
         });
-        setShowWinnerModal(true);
-      }
+        //setShowWinnerModal(true);
+     // }
       
 	   if (winnerData.cartela) {
       console.log('🎯 Received winning cartela:', winnerData.cartela);
