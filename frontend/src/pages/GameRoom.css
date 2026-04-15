@@ -1,12 +1,12 @@
 .game-room {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
-  padding: 20px;
+  background: #3b444b;
+  padding: 2px;
   color: #fff;
 }
 
 .game-header {
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.5);
   padding: 15px 20px;
   border-radius: 10px;
   margin-bottom: 20px;
@@ -103,7 +103,7 @@
 
 .game-content {
   display: flex;
-  gap: 20px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -128,15 +128,15 @@
   background: #000;
   border: 2px solid #ffd700;
   border-radius: 10px;
-  padding: 15px;
+  padding: 1px;
   flex: 1;
-  min-width: 280px;
+  max-width: 150px;
 }
 
 .game-cartela h4 {
   color: #ffd700;
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 
 .bingo-card {
@@ -149,8 +149,8 @@
   border: 1px solid #ffd700;
   padding: 8px;
   text-align: center;
-  width: 45px;
-  height: 45px;
+  width: 30px;
+  height: 30px;
 }
 
 .bingo-card th {
@@ -193,7 +193,7 @@
 
 .bingo-board {
   display: flex;
-  gap: 5px;
+  gap: 1px;
   justify-content: center;
 }
 
@@ -214,7 +214,7 @@
 .column-numbers {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .number-cell {

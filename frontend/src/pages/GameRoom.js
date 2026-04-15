@@ -392,8 +392,8 @@ const renderWinningCartela = (cardData, winningCells) => {
             🏆 Winner Gets: {winnerAmount.toFixed(2)} Birr 
           </div>
         </div>
-        <div className="game-controls">
-		{/* <button
+     {/*   <div className="game-controls">
+		 <button
             className={`mode-toggle ${autoMark ? 'auto' : 'manual'}`}
             onClick={() => setAutoMark(!autoMark)}
           >
@@ -412,8 +412,8 @@ const renderWinningCartela = (cardData, winningCells) => {
   socket.emit('test-auto-mark', { userId: user.id, number: 99 });
 }}>
   TEST AUTO-MARK
-</button>*/}
-        </div>
+</button>
+        </div>*/}
       </div>
       
       <div className="game-content">
