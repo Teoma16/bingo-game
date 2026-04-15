@@ -103,13 +103,13 @@
 
 .game-content {
   display: flex;
-  gap: 10px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
 .cartelas-section {
   flex: 2;
-  max-width: 160px;
+  max-width: 175px;
 }
 
 .cartelas-section h3 {
@@ -121,14 +121,14 @@
   display: flex;
   gap: 5px;
   flex-wrap: wrap;
-   max-width: 160px;
+   max-width: 170px;
 }
 
 .game-cartela {
   background: #000;
   border: 2px solid #ffd700;
   border-radius: 10px;
-  padding: 1px;
+  padding: 5px;
   flex: 1;
   max-width: 160px;
   margin-left:10px;
@@ -179,7 +179,7 @@
 
 .called-numbers-section {
   flex: 1;
-  max-width: 180px;
+  max-width: 200px;
   background: rgba(0, 0, 0, 0.8);
   border-radius: 10px;
   padding: 1px;
