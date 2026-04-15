@@ -25,7 +25,8 @@
   padding-left:35%;
 padding-top:4px;
 padding-bottom:6px;
-  border-bottom: 2px solid #a21f3a;
+  border-bottom: 2px solid #010817;
+  box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.15);
 }
 .user-info1 h1 {
   color: #fff;
@@ -97,12 +98,12 @@ padding-bottom:6px;
 }
 
 .lucky-number {
-  background: #071331;
+  background: #010817;
   color: #ffd700;
   border: 0.5px solid #414a4c;
-  padding: 12px 5px;
+  padding: 18px 5px;
   text-align: center;
-  /*border-radius: 2px;*/
+  border-radius: 2px;
   cursor: pointer;
   font-weight: bold;
 }
@@ -153,11 +154,12 @@ padding-bottom:6px;
 
 .footer-menu button {
   background: #2a2a2a;
-  color: #ffd700;
+  color: #fff;
   border: 1px solid #ffd700;
   padding: 8px;
   border-radius: 5px;
   flex: 1;
+  font-weight:bold;
 }
 
 .telebirr-info {
