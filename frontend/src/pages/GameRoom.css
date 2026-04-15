@@ -121,7 +121,7 @@
   display: flex;
   gap: 5px;
   flex-wrap: wrap;
-   max-width: 170px;
+   max-width: 175px;
 }
 
 .game-cartela {
@@ -130,7 +130,7 @@
   border-radius: 10px;
   padding: 5px;
   flex: 1;
-  max-width: 160px;
+  max-width: 170px;
   margin-left:10px;
 }
 
@@ -207,7 +207,7 @@
   background: #ffd700;
   color: #000;
   font-weight: bold;
-  padding: 8px;
+  padding: 3px;
   margin-bottom: 5px;
   border-radius: 5px;
 }
@@ -215,7 +215,7 @@
 .column-numbers {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .number-cell {
@@ -333,7 +333,7 @@
   background: #ffd700;
   color: #000;
   font-weight: bold;
-  padding: 8px;
+  padding: 3px;
   border-radius: 5px;
   margin-bottom: 8px;
   font-size: 1.2rem;
