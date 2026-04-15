@@ -21,7 +21,7 @@
   left:0;
   right:0;
   align-items: center;
-  background: #4d4d4d;
+  background: #071331;
   padding-left:35%;
 padding-top:4px;
 padding-bottom:6px;
@@ -93,12 +93,12 @@ padding-bottom:6px;
 
 .numbers-container {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 1px;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
 }
 
 .lucky-number {
-  background: #3b444b;
+  background: #071331;
   color: #ffd700;
   border: 0.5px solid #414a4c;
   padding: 12px 5px;

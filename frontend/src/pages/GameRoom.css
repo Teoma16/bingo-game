@@ -766,12 +766,12 @@
 }
 
 .winning-modal-cell {
-  background: #6d3800;
+  background: #1a1a1a;
   color: #fff;
 }
 
 .winning-modal-cell.winning-highlight {
-  background: #ffd700 !important;
+  background: #6d3800 !important;
   color: #000 !important;
   font-weight: bold;
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
