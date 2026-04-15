@@ -98,12 +98,12 @@ padding-bottom:6px;
 }
 
 .lucky-number {
-  background: #010817;
+  background: #111827;
   color: #ffd700;
   border: 0.5px solid #414a4c;
   padding: 18px 5px;
   text-align: center;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
 }
