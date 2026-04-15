@@ -109,7 +109,7 @@
 
 .cartelas-section {
   flex: 2;
-  max-width: 150px;
+  max-width: 160px;
 }
 
 .cartelas-section h3 {
@@ -121,7 +121,7 @@
   display: flex;
   /*gap: 20px;*/
   flex-wrap: wrap;
-   max-width: 150px;
+   max-width: 160px;
 }
 
 .game-cartela {
@@ -130,7 +130,7 @@
   border-radius: 10px;
   padding: 1px;
   flex: 1;
-  max-width: 150px;
+  max-width: 160px;
 }
 
 .game-cartela h4 {
@@ -317,14 +317,14 @@
 
 .bingo-columns {
   display: flex;
-  gap: 8px;
+  gap: 1px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .bingo-column-full {
   flex: 1;
-  max-width: 40px;
+  max-width: 30px;
   text-align: center;
 }
 
