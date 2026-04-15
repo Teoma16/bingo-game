@@ -216,8 +216,8 @@ padding-bottom:6px;
 
 @media (max-width: 768px) {
   .numbers-container {
-    grid-template-columns: repeat(10, 1fr);
-    gap: 1px;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
   }
   
   .lucky-number {
