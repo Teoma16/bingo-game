@@ -25,11 +25,10 @@
   padding-left:35%;
 padding-top:4px;
 padding-bottom:6px;
-  
   border-bottom: 2px solid #a21f3a;
 }
 .user-info1 h1 {
-  color: #d926aa;
+  color: #fff;
   margin-bottom: 5px;
 }
 .user-info h3 {
@@ -79,7 +78,7 @@ padding-bottom:6px;
 }
 
 .lucky-numbers-grid {
-  background: #1e1e1e;
+  background: #3b444b;
   /*border-radius: 15px;*/
   padding: 2px;
   margin-bottom: 70px;
