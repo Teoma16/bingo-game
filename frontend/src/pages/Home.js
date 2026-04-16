@@ -21,7 +21,9 @@ const Home = ({ user, setUser }) => {
   const [showFooter, setShowFooter] = useState(false);
   const [takenNumbers, setTakenNumbers] = useState([]);
 
-
+// Add this state with your other states
+const [isGameActive, setIsGameActive] = useState(false);
+const [waitingMessage, setWaitingMessage] = useState('');
 // Add these state variables after your existing states
 const [showBalanceModal, setShowBalanceModal] = useState(false);
 const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -245,6 +247,16 @@ const handleWithdraw = async () => {
 newSocket.on('registered', (data) => {
   console.log('Registered:', data);
   setBalance(data.user.wallet_balance);
+  
+  // NEW: Check current game status
+  if (data.gameStatus === 'active') {
+    setIsGameActive(true);
+    setWaitingMessage('🎮 A game is currently in progress. Please wait for the next game...');
+  } else {
+    setIsGameActive(false);
+    setWaitingMessage('');
+  } 
+  
   // Set initial taken numbers from server
   if (data.takenNumbers) {
     setTakenNumbers(data.takenNumbers);
@@ -275,8 +287,18 @@ newSocket.on('game-state', (data) => {
       setGameStatus('waiting');
       setTimeRemaining(data.prepareTime);
       toast.success(data.message);
+	  
+	    // NEW CODE: Ensure lucky numbers are shown during waiting period
+  setIsGameActive(false);
+  setWaitingMessage('');
     });
-    
+  // Listen for game-ended event (when a game ends) - ADD THIS
+newSocket.on('game-ended', (data) => {
+  console.log('Game ended - showing lucky numbers');
+  setIsGameActive(false);
+  setWaitingMessage('');
+  toast.success('Game ended! You can now select lucky numbers for the next game.');
+});  
   newSocket.on('game-update', (data) => {
   setTotalPlayers(data.totalPlayers);
  // const winnerAmt = (data.prizePool || 0) * 0.81;
@@ -310,7 +332,9 @@ newSocket.on('game-state', (data) => {
 newSocket.on('game-started', (data) => {
   console.log('Game started! Prize pool:', data.prizePool);
   console.log('Selected cartelas before navigate:', selectedCartelas);
-  
+    // NEW CODE: Hide lucky numbers on home page
+  setIsGameActive(true);
+  setWaitingMessage('🎮 Another game is in progress. Please wait for the next game...');
   // Calculate winner amount from prize pool
   const winnerAmt = (data.prizePool || 0) * 0.81;
   
@@ -439,7 +463,19 @@ newSocket.on('game-started', (data) => {
       <div className="lucky-numbers-section">
         <div className="lucky-numbers-grid">
           <h2>የእድል ቁጥር ይምረጡ </h2>
-          <div className="numbers-container">
+          
+		  {/* Show waiting message when game is active */}
+    {isGameActive && (
+      <div className="game-active-warning">
+        <div className="warning-icon">🎮</div>
+        <div className="warning-message">{waitingMessage}</div>
+        <div className="warning-submessage">The game will end soon. Please wait...</div>
+      </div>
+    )}
+		  
+		   {/* Show numbers only when game is NOT active */}
+    {!isGameActive ? (
+		  <div className="numbers-container">
             {luckyNumbers.map(number => (
               <button
                 key={number}
@@ -456,10 +492,16 @@ newSocket.on('game-started', (data) => {
               </button>
             ))}
           </div>
+		  ):(
+		  <div className="numbers-disabled-overlay">
+        <div className="loading-spinner-small"></div>
+        <p>Waiting for current game to finish...</p>
+      </div>
+    )}
         </div>
         
-        {/* Selected Cartelas Display */}
-        {selectedCartelas.length > 0 && (
+ {/* Selected Cartelas Display - also hide during active game */}
+        {!isGameActive && selectedCartelas.length > 0 && (
           <div className="selected-cartelas-section">
             <h3>Your Selected Cartelas ({selectedCartelas.length}/2)</h3>
             <div className="cartelas-container">

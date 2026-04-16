@@ -714,3 +714,57 @@ padding-bottom:6px;
   font-size: 12px;
   color: #888;
 }
+
+/* Game active warning */
+.game-active-warning {
+  background: linear-gradient(135deg, #ff4444, #cc0000);
+  border-radius: 15px;
+  padding: 20px;
+  text-align: center;
+  margin: 20px 0;
+  animation: pulse 1.5s ease infinite;
+}
+
+.warning-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.warning-message {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 5px;
+}
+
+.warning-submessage {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.numbers-disabled-overlay {
+  text-align: center;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 15px;
+  margin: 20px 0;
+}
+
+.loading-spinner-small {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 215, 0, 0.3);
+  border-top-color: #ffd700;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 15px auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.01); }
+}

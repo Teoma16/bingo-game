@@ -153,7 +153,8 @@ socket.on('test-mark', async (data) => {
         },
         takenNumbers: takenNumbers,
         prizePool: this.currentGame?.prize_pool || 0,
-        winnerAmount: winnerAmount
+        winnerAmount: winnerAmount,
+		 gameStatus: this.currentGame?.status || 'waiting'  // Add this line
       });
       
     } catch (error) {
