@@ -458,6 +458,11 @@ async handleAutoMark(socket, { userId, number }) {
   });
   
   console.log(`Game #${gameNumber} created`);
+    // Emit fresh state to all clients
+  this.io.emit('game-waiting', {
+    prepareTime: 35,
+    message: 'New game starting! Select your lucky numbers!'
+  });
   this.startWaitingPeriod();
 }
 
@@ -467,11 +472,31 @@ async handleAutoMark(socket, { userId, number }) {
     let playerCheckInterval = null;
     let isGameStarting = false;
     
+	  // CRITICAL: Clear all previous game data for new waiting period
+  // Reset all players' cartelas and marked numbers
+  this.players.forEach(player => {
+    player.cartelaIds = [];
+    player.markedNumbers = [];
+  });
+	  // Also clear any stored game data in the database for this game
+  if (this.currentGame) {
+    // Clear game players records for the new game
+    await GamePlayer.destroy({ where: { game_id: this.currentGame.id } });
+  }
+	
     this.io.emit('game-waiting', {
       prepareTime: waitingTime,
       message: 'Game starting soon! Select your lucky numbers!'
     });
     
+	  // Also emit that all numbers are now available
+  const allNumbers = [];
+  for (let i = 1; i <= 200; i++) allNumbers.push(i);
+  this.io.emit('cartela-availability', {
+    availableNumbers: allNumbers,
+    takenNumbers: []
+  });
+	
     countdownInterval = setInterval(() => {
       if (waitingTime > 0) {
         waitingTime--;

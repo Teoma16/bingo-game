@@ -252,15 +252,19 @@ newSocket.on('registered', (data) => {
   if (data.gameStatus === 'active') {
     setIsGameActive(true);
     setWaitingMessage('🎮 A game is currently in progress. Please wait for the next game...');
+	if (data.takenNumbers) {
+      setTakenNumbers(data.takenNumbers);
+    }
   } else {
     setIsGameActive(false);
     setWaitingMessage('');
+	  setTakenNumbers([]);
+    setSelectedNumbers([]);
+    setSelectedCartelas([]);
   } 
   
   // Set initial taken numbers from server
-  if (data.takenNumbers) {
-    setTakenNumbers(data.takenNumbers);
-  }
+ 
   if (data.prizePool) {
     setWinnerAmount(data.winnerAmount || 0);
   }
@@ -289,14 +293,23 @@ newSocket.on('game-state', (data) => {
       toast.success(data.message);
 	  
 	    // NEW CODE: Ensure lucky numbers are shown during waiting period
+		  setTakenNumbers([]);
+  setSelectedNumbers([]);
+  setSelectedCartelas([]);
   setIsGameActive(false);
   setWaitingMessage('');
+    // Also clear localStorage for new game
+  localStorage.removeItem('userCartelas');
     });
   // Listen for game-ended event (when a game ends) - ADD THIS
 newSocket.on('game-ended', (data) => {
   console.log('Game ended - showing lucky numbers');
-  setIsGameActive(false);
+setTakenNumbers([]);
+  setSelectedNumbers([]);
+  setSelectedCartelas([]); 
+ setIsGameActive(false);
   setWaitingMessage('');
+    localStorage.removeItem('userCartelas');
   toast.success('Game ended! You can now select lucky numbers for the next game.');
 });  
   newSocket.on('game-update', (data) => {
