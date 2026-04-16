@@ -115,7 +115,7 @@
 
 .cartelas-section {
   flex: 1;
-  max-width: 180px;;
+  /*max-width: 180px;;*/
 }
 
 .cartelas-section h3 {
@@ -186,7 +186,7 @@
 
 .called-numbers-section {
   flex: 1;
-  max-width: 180px;
+  /*max-width: 180px;*/
   background: rgba(0, 0, 0, 0.8);
   border-radius: 10px;
   padding: 1px;
@@ -315,7 +315,7 @@
 /* Bingo Board Full */
 .bingo-board-full {
   margin-top: 20px;
-   max-width:180px;
+  /* max-width:180px;*/
 }
 
 .bingo-board-full h3 {
@@ -352,7 +352,7 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  max-height: 150px;
+  max-height: auto;
  /* overflow-y: auto;*/
 }
 
