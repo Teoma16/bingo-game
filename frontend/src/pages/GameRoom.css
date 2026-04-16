@@ -155,10 +155,11 @@
 .bingo-card th,
 .bingo-card td {
   border: 1px solid #114ba6;
-  padding: 3px;
+  padding: 6px;
   text-align: center;
   width: 30px;
   height: 30px;
+  font-style:bold;
 }
 
 .bingo-card th {
@@ -173,7 +174,7 @@
 }
 
 .bingo-card td.marked {
-  background: #00ff00;
+  background: #a7a6e0;
   color: #000;
  /* text-decoration: line-through;*/
 }
@@ -191,6 +192,8 @@
   border-radius: 10px;
   padding: 1px;
   border: 1px solid #ffd700;
+  margin-right:5px;
+  padding-bottom:10px;
 }
 
 .called-numbers-section h3 {
@@ -278,7 +281,7 @@
   
   .bingo-card th,
   .bingo-card td {
-    padding: 4px;
+    padding: 6px;
     width: 30px;
     height: 30px;
     font-size: 10px;
@@ -427,17 +430,17 @@
 /* Responsive */
 @media (max-width: 768px) {
   .bingo-column-full {
-    min-width: 20px;
+    min-width: 25px;
   }
   
   .bingo-number {
     font-size: 8px;
-    padding: 3px 2px;
+    padding: 6px 3px;
   }
   
   .column-header {
     font-size: 0.9rem;
-    padding: 4px;
+    padding: 8px;
   }
   
   .recent-call {
