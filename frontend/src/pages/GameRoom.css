@@ -148,7 +148,7 @@
 .bingo-card th,
 .bingo-card td {
   border: 1px solid #114ba6;
-  padding: 8px;
+  padding: 3px;
   text-align: center;
   width: 30px;
   height: 30px;
@@ -308,12 +308,14 @@
 /* Bingo Board Full */
 .bingo-board-full {
   margin-top: 20px;
+   max-width:200px;
 }
 
 .bingo-board-full h3 {
   color: #ffd700;
   margin-bottom: 10px;
   font-size: 1rem;
+ 
 }
 
 .bingo-columns {
@@ -336,7 +338,7 @@
   padding: 3px;
   border-radius: 5px;
   margin-bottom: 8px;
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .column-numbers-full {
