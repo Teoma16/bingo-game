@@ -380,7 +380,7 @@ const renderWinningCartela = (cardData, winningCells) => {
         <div className="game-title">
           <h2>🎯 BINGO GAME #{gameNumber}</h2>
         </div>
-		<div className="left-group">
+		
         <div className="current-number-display">
           <span className="current-label">Current Number:</span>
           <span className="current-number">{currentNumberWithLetter || '---'}</span>
@@ -388,7 +388,7 @@ const renderWinningCartela = (cardData, winningCells) => {
         <div className="call-count">
           📞 Calls: {callCount}/75
         </div>
-		</div>
+		
         <div className="prize-info">
           <div className="winner-prize-display">
             🏆 Winner Gets: {winnerAmount.toFixed(2)} Birr 

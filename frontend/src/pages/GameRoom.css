@@ -42,14 +42,11 @@
 }
 
 .current-number {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: bold;
   color: #ffd700;
   margin-left: 10px;
-  border: 2px solid #2d4a73;
-  padding:5px;
-  border-radius:50%;
-  background:#3A4A63;
+
 }
 
 .call-count {
@@ -118,7 +115,7 @@
 
 .cartelas-section {
   flex: 2;
-  max-width: 170px;
+  width: 48%;
 }
 
 .cartelas-section h3 {
@@ -131,7 +128,7 @@
   display: flex;
   gap: 5px;
   flex-wrap: wrap;
-   max-width: 170px;
+   width: 100%;
 }
 
 .game-cartela {
@@ -189,7 +186,7 @@
 
 .called-numbers-section {
   flex: 1;
-  max-width: 170px;
+  width: 48%;
   background: rgba(0, 0, 0, 0.8);
   border-radius: 10px;
   padding: 1px;
@@ -318,7 +315,7 @@
 /* Bingo Board Full */
 .bingo-board-full {
   margin-top: 20px;
-   max-width:200px;
+   max-width:180px;
 }
 
 .bingo-board-full h3 {
@@ -332,12 +329,12 @@
   display: flex;
   gap: 1px;
   justify-content: center;
-  flex-wrap: wrap;
+ /* flex-wrap: wrap;*/
 }
 
 .bingo-column-full {
   flex: 1;
-  max-width: 25px;
+  max-width: 20px;
   text-align: center;
 }
 
@@ -361,7 +358,7 @@
 
 .bingo-number {
   background: #2a2a2a;
-  padding: 6px 4px;
+  padding: 3px 2px;
   border-radius: 4px;
   font-size: 12px;
   text-align: center;
@@ -430,7 +427,7 @@
 /* Responsive */
 @media (max-width: 768px) {
   .bingo-column-full {
-    min-width: 45px;
+    min-width: 20px;
   }
   
   .bingo-number {
