@@ -6,26 +6,18 @@
 }
 
 .game-header {
-  background: rgba(18, 18, 18, 0.7);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.5);
   padding: 15px 20px;
+  /*border-radius: 10px;*/
+  margin-bottom: 20px;
   border-bottom: 2px solid #ffd700;
-
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 15px;
-
-  width: 100%;
-  min-height: 80px;
-
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 4;
-
-  box-shadow: 0 8px 20px -5px rgba(0,0,0,0.6);
+  position:fixed;
+  z-index:4;
 }
 
 .game-header h2 {
