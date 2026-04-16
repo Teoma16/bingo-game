@@ -289,7 +289,7 @@ console.log('   location.state?.gameId:', location.state?.gameId);
         columns[col].numbers.push({
           number: i,
           called: calledMap.has(i),
-          display: `${col}${i}`
+          display: `${i}`
         });
       }
     }
