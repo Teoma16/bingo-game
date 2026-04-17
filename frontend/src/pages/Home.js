@@ -522,10 +522,11 @@ const numberToLetter = (number) => {
 	  <div className="header1">
 	  <div className="user-info1">
           <h1>BINGO-B</h1>
-          
-        </div>
+         
+        </div> 
+		<span style={{color:'#fff'}}>የመጫወቻ ሂሳብ ፡ 10 ብር</span>
 	  </div>
-	  <span style={{color:'#fff'}}>የመጫወቻ ሂሳብ ፡ 10 ብር</span>
+	  
       <div className="header">
         <div className="user-info">
           <h3>👤 {user?.username || user?.phone_number}</h3>
