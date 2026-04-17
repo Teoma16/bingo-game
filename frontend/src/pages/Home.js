@@ -20,16 +20,7 @@ const Home = ({ user, setUser }) => {
   const [adData, setAdData] = useState(null);
   const [showFooter, setShowFooter] = useState(false);
   const [takenNumbers, setTakenNumbers] = useState([]);
-// Add these states with your other states
-const [waitingWinner, setWaitingWinner] = useState(null);
-const [showWaitingWinnerModal, setShowWaitingWinnerModal] = useState(false);
 
-// Add these states
-const [liveGameData, setLiveGameData] = useState(null);
-const [showLiveGame, setShowLiveGame] = useState(false);
-const [liveCalledNumbers, setLiveCalledNumbers] = useState([]);
-const [liveCurrentNumber, setLiveCurrentNumber] = useState(null);
-const [liveCallCount, setLiveCallCount] = useState(0);
 // Add this state with your other states
 const [isGameActive, setIsGameActive] = useState(false);
 const [waitingMessage, setWaitingMessage] = useState('');
@@ -310,55 +301,17 @@ newSocket.on('game-state', (data) => {
     // Also clear localStorage for new game
   localStorage.removeItem('userCartelas');
     });
-	
-	// Listen for number calls (for waiting players)
-newSocket.on('number-called', (data) => {
-  if (isGameActive) {
-    // Update live game display
-    setLiveCurrentNumber(data.number);
-    setLiveCalledNumbers(data.calledNumbers);
-    setLiveCallCount(data.callCount);
-    setShowLiveGame(true);
-  }
-});
   // Listen for game-ended event (when a game ends) - ADD THIS
-// Listen for game-ended event
 newSocket.on('game-ended', (data) => {
-  console.log('Game ended - showing winner to waiting players:', data);
-  
-  // Show winner announcement for waiting players
-  if (data.winners && data.winners.length > 0) {
-    const winnerData = data.winners[0];
-    setWaitingWinner({
-      userId: winnerData.userId,
-      username: winnerData.username || `Player ${winnerData.userId}`,
-      amount: winnerData.amount,
-      cartela: winnerData.cartela,
-      winningCells: winnerData.winningCells || []
-    });
-    setShowWaitingWinnerModal(true);
-    
-    // Auto hide after 5 seconds
-    setTimeout(() => {
-      setShowWaitingWinnerModal(false);
-    }, 5000);
-  }
-  
-  // Clear live game data
-  setIsGameActive(false);
-  setShowLiveGame(false);
-  setLiveCalledNumbers([]);
-  setLiveCurrentNumber(null);
-  setWaitingMessage('');
-   setLiveGameData(null);
-  // Clear selections for next game
-  setTakenNumbers([]);
+  console.log('Game ended - showing lucky numbers');
+setTakenNumbers([]);
   setSelectedNumbers([]);
-  setSelectedCartelas([]);
-  localStorage.removeItem('userCartelas');
-  
+  setSelectedCartelas([]); 
+ setIsGameActive(false);
+  setWaitingMessage('');
+    localStorage.removeItem('userCartelas');
   toast.success('Game ended! You can now select lucky numbers for the next game.');
-}); 
+});  
   newSocket.on('game-update', (data) => {
   setTotalPlayers(data.totalPlayers);
  // const winnerAmt = (data.prizePool || 0) * 0.81;
@@ -444,26 +397,7 @@ newSocket.on('game-started', (data) => {
   if (takenNumbers.includes(number) && !selectedNumbers.includes(number)) return true;
   return false;
 };
-const getNumbersForColumn = (letter) => {
-  switch(letter) {
-    case 'B': return Array.from({ length: 15 }, (_, i) => i + 1);
-    case 'I': return Array.from({ length: 15 }, (_, i) => i + 16);
-    case 'N': return Array.from({ length: 15 }, (_, i) => i + 31);
-    case 'G': return Array.from({ length: 15 }, (_, i) => i + 46);
-    case 'O': return Array.from({ length: 15 }, (_, i) => i + 61);
-    default: return [];
-  }
-};
 
-const numberToLetter = (number) => {
-  if (!number) return '---';
-  if (number >= 1 && number <= 15) return `B${number}`;
-  if (number >= 16 && number <= 30) return `I${number}`;
-  if (number >= 31 && number <= 45) return `N${number}`;
-  if (number >= 46 && number <= 60) return `G${number}`;
-  if (number >= 61 && number <= 75) return `O${number}`;
-  return number;
-};
   // Render a single cartela (for display below lucky numbers)
   const renderCartela = (cartela, index) => {
     const grid = convertToGrid(cartela.card_data);
@@ -476,7 +410,7 @@ const numberToLetter = (number) => {
             className="remove-cartela-btn"
             onClick={() => handleNumberClick(cartela.lucky_number)}
           >
-            X Remove
+            ✕ Remove
           </button>
         </div>
         <table className="bingo-card">
@@ -522,11 +456,9 @@ const numberToLetter = (number) => {
 	  <div className="header1">
 	  <div className="user-info1">
           <h1>BINGO-B</h1>
-         
-        </div> 
-		<span style={{color:'#fff'}}>የመጫወቻ ሂሳብ ፡ 10 ብር</span>
+          
+        </div>
 	  </div>
-	  
       <div className="header">
         <div className="user-info">
           <h3>👤 {user?.username || user?.phone_number}</h3>
@@ -688,106 +620,6 @@ const numberToLetter = (number) => {
     </div>
   </div>
 )}
-
-{/* Live Game View for Waiting Players */}
-{isGameActive && showLiveGame && (
-  <div className="live-game-view">
-    <div className="live-game-header">
-      <h3>🎯 LIVE GAME IN PROGRESS</h3>
-      <div className="live-current-number">
-        <span className="live-label">Current Number:</span>
-        <span className="live-number">{numberToLetter(liveCurrentNumber)}</span>
-      </div>
-      <div className="live-call-count">
-        📞 Calls: {liveCallCount}/75
-      </div>
-    </div>
-    
-    <div className="live-bingo-board">
-      <h4>Called Numbers Board</h4>
-      <div className="bingo-columns-live">
-        {['B', 'I', 'N', 'G', 'O'].map(letter => (
-          <div key={letter} className="bingo-column-live">
-            <div className="column-header-live">{letter}</div>
-            <div className="column-numbers-live">
-              {getNumbersForColumn(letter).map(num => {
-                const called = liveCalledNumbers.includes(num);
-                return (
-                  <div key={num} className={`live-number ${called ? 'called' : ''}`}>
-                    {letter}{num}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-    
-    <div className="live-recent-calls">
-      <h4>📢 Recent Calls</h4>
-      <div className="recent-calls-list">
-        {[...liveCalledNumbers].reverse().slice(0, 12).map(num => (
-          <span key={num} className="recent-call-live">{numberToLetter(num)}</span>
-        ))}
-      </div>
-    </div>
-    
-    <div className="waiting-message">
-      <div className="loading-spinner-small"></div>
-      <p>Game in progress. You can select lucky numbers when it ends...</p>
-    </div>
-  </div>
-)}
-{/* Winner Announcement Modal for Waiting Players */}
-{showWaitingWinnerModal && waitingWinner && (
-  <div className="winner-modal-overlay">
-    <div className="winner-modal large-modal">
-      <div className="winner-fireworks">
-        <div className="firework"></div>
-        <div className="firework"></div>
-        <div className="firework"></div>
-        <div className="firework"></div>
-        <div className="firework"></div>
-      </div>
-      
-      <div className="winner-content">
-        <div className="winner-trophy">🏆</div>
-        <h1 className="winner-title">BINGO!</h1>
-        
-        <div className="winner-announcement">
-          <p className="winner-congrats">🎉 GAME OVER! 🎉</p>
-          <p className="winner-message">🏆 {waitingWinner.username} won the game! 🏆</p>
-          <div className="winner-amount">
-            <span className="amount-label">Prize Amount</span>
-            <span className="amount-value">{waitingWinner.amount.toFixed(2)} Birr</span>
-          </div>
-        </div>
-        
-        {/* Show winning cartela if available */}
-        {waitingWinner.cartela && (
-          <div className="winning-cartela-section">
-            <h3>🏆 Winning Cartela #{waitingWinner.cartela.lucky_number} 🏆</h3>
-          </div>
-        )}
-        
-        <div className="winner-redirect">
-          New game starting soon...
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-{/* Show waiting message only if no live data yet */}
-{isGameActive && !showLiveGame && (
-  <div className="game-active-warning">
-    <div className="warning-icon">🎮</div>
-    <div className="warning-message">{waitingMessage}</div>
-    <div className="loading-spinner-small"></div>
-  </div>
-)}
-
-
   {/* WITHDRAW MODAL */}
 {showWithdrawModal && (
   <div className="modal-overlay" onClick={() => {
