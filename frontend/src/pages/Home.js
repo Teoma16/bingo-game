@@ -309,6 +309,7 @@ setTakenNumbers([]);
   setSelectedCartelas([]); 
  setIsGameActive(false);
   setWaitingMessage('');
+   setWinnerAmount(0);  // Reset winner amount to 0
     localStorage.removeItem('userCartelas');
   toast.success('Game ended! You can now select lucky numbers for the next game.');
 });  
@@ -341,7 +342,7 @@ setTakenNumbers([]);
     });
     
   // In your game-started event listener
-// In your game-started event listener
+
 newSocket.on('game-started', (data) => {
   console.log('Game started! Prize pool:', data.prizePool);
   console.log('Selected cartelas before navigate:', selectedCartelas);

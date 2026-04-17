@@ -132,13 +132,7 @@ socket.on('test-mark', async (data) => {
         socketId: socket.id
       });
       
-	  
-	  this.players.set(socket.id, {
-  userId: user.id,
-  cartelaIds: [],
-  markedNumbers: [],  // Add this line
-  socketId: socket.id
-});
+
       // Send current game state with taken numbers
       const winnerAmount = (this.currentGame?.prize_pool || 0) * 0.81;
       const takenNumbers = this.getAllTakenNumbers();
@@ -156,7 +150,10 @@ socket.on('test-mark', async (data) => {
         winnerAmount: winnerAmount,
 		 gameStatus: this.currentGame?.status || 'waiting'  // Add this line
       });
-      
+      // Broadcast to ALL players that a new player joined (optional)
+    this.io.emit('player-joined', { 
+      totalPlayers: this.getUniquePlayerCount() 
+    });
     } catch (error) {
       console.error('Register error:', error);
       socket.emit('error', { message: 'Registration failed' });
