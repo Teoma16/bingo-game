@@ -525,7 +525,7 @@ const numberToLetter = (number) => {
           
         </div>
 	  </div>
-	  <span style="color:#fff;">የመጫወቻ ሂሳብ ፡ 10 ብር</span>
+	  <span style={{color:'#fff'}}>የመጫወቻ ሂሳብ ፡ 10 ብር</span>
       <div className="header">
         <div className="user-info">
           <h3>👤 {user?.username || user?.phone_number}</h3>
