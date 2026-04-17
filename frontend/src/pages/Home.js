@@ -476,7 +476,7 @@ const numberToLetter = (number) => {
             className="remove-cartela-btn"
             onClick={() => handleNumberClick(cartela.lucky_number)}
           >
-            ✕ Remove
+            X Remove
           </button>
         </div>
         <table className="bingo-card">
@@ -525,6 +525,7 @@ const numberToLetter = (number) => {
           
         </div>
 	  </div>
+	  <span style="color:#fff;">የመጫወቻ ሂሳብ ፡ 10 ብር</span>
       <div className="header">
         <div className="user-info">
           <h3>👤 {user?.username || user?.phone_number}</h3>
