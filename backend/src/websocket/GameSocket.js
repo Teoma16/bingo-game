@@ -151,7 +151,7 @@ socket.on('test-mark', async (data) => {
         winnerAmount: winnerAmount,
 		 gameStatus: this.currentGame?.status || 'waiting'  // Add this line
 		 gameId: this.currentGame?.id || null,        // ← ADD THIS
-  gameNumber: this.currentGame?.game_number || 0  // ← ADD THIS
+  gameNumber: this.currentGame?.game_number || 0,  // ← ADD THIS
    totalPlayers: this.currentGame?.total_players || 0,      // ← ADD THIS
   totalCartelas: this.currentGame?.total_cartelas || 0    // ← ADD THIS
       });
