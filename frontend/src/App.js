@@ -189,6 +189,7 @@ function App() {
 
   if (showLogin) {
     return (
+
       <div className="login-screen">
         <div className="login-card">
           <h1>🎰 Bingo Game</h1>

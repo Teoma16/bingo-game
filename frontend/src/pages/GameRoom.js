@@ -41,6 +41,13 @@ const [winningCells, setWinningCells] = useState([]);
   );
   
   useEffect(() => {
+  console.log('=== DEBUG GAMEROOM ===');
+  console.log('isSpectator:', isSpectator);
+  console.log('location.state:', location.state);
+  console.log('selectedCartelas from state:', selectedCartelas);
+}, []);
+  
+  useEffect(() => {
     console.log('=== GAMEROOM LOADING CARTELAS ===');
     console.log('Location state:', location.state);
     
@@ -69,6 +76,12 @@ const [winningCells, setWinningCells] = useState([]);
   
   
   const fetchUserCartelas = async () => {
+	   const token = localStorage.getItem('token');
+  console.log('Token exists?', !!token);
+  if (!token) {
+    console.log('No token found - user may need to login');
+    return;
+  }
     try {
       const response = await axios.get(`${API_URL}/api/game/user-cartelas/${user.id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }

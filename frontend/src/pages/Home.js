@@ -184,7 +184,11 @@ const handleWithdraw = async () => {
       });
     }
     setSelectedNumbers(prev => prev.filter(n => n !== number));
-    setSelectedCartelas(prev => prev.filter(c => c.lucky_number !== number));
+    setSelectedCartelas(prev => {
+      const newCartelas = prev.filter(c => c.lucky_number !== number);
+      localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
+      return newCartelas;
+    });
     toast(`Cartela ${number} deselected`);
   } else {
     // SELECT - This is a new number
@@ -213,11 +217,18 @@ const handleWithdraw = async () => {
         });
       }
       setSelectedNumbers(prev => [...prev, number]);
-      setSelectedCartelas(prev => [...prev, {
+      
+      const newCartela = {
         lucky_number: number,
         card_data: cartelaData.card_data
-      }]);
-    // toast.success(`Cartela ${number} selected!`);
+      };
+      
+      setSelectedCartelas(prev => {
+        const newCartelas = [...prev, newCartela];
+        localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
+        return newCartelas;
+      });
+      // toast.success(`Cartela ${number} selected!`);
     }
   }
 };
