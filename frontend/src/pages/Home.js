@@ -308,15 +308,20 @@ newSocket.on('game-state', (data) => {
   // Listen for game-ended event (when a game ends) - ADD THIS
 newSocket.on('game-ended', (data) => {
   console.log('Game ended - showing lucky numbers');
-setTakenNumbers([]);
+  setTakenNumbers([]);
   setSelectedNumbers([]);
   setSelectedCartelas([]); 
- setIsGameActive(false);
+  setIsGameActive(false);
   setWaitingMessage('');
-   setWinnerAmount(0);  // Reset winner amount to 0
-    localStorage.removeItem('userCartelas');
+  setWinnerAmount(0);  // Reset winner amount to 0
+  localStorage.removeItem('userCartelas');
+    // Request fresh game state
+  newSocket.emit('get-game-state');
   toast.success('Game ended! You can now select lucky numbers for the next game.');
 });  
+
+
+
   newSocket.on('game-update', (data) => {
   setTotalPlayers(data.totalPlayers);
  // const winnerAmt = (data.prizePool || 0) * 0.81;
@@ -346,7 +351,7 @@ setTakenNumbers([]);
     });
     
   // In your game-started event listener
-
+/*
 newSocket.on('game-started', (data) => {
   console.log('Game started! Prize pool:', data.prizePool);
   console.log('Selected cartelas before navigate:', selectedCartelas);
@@ -373,7 +378,60 @@ newSocket.on('game-started', (data) => {
     } 
   });
 });
+ */ 
+newSocket.on('game-started', (data) => {
+  console.log('Game started! Prize pool:', data.prizePool);
+  console.log('Selected cartelas before navigate:', selectedCartelas);
+  
+  // Check if current user is a PLAYER (has selected cartelas) or SPECTATOR
+  const hasSelectedCartelas = selectedCartelas.length > 0;
+  
+  if (hasSelectedCartelas) {
+    // PLAYER - User is participating in this game
+    console.log('User is a PLAYER, joining the game');
+    setIsGameActive(true);
+    setWaitingMessage('🎮 Game started! You are playing...');
     
+    // Save cartelas for the game
+    localStorage.setItem('userCartelas', JSON.stringify(selectedCartelas));
+    
+    const winnerAmt = (data.prizePool || 0) * 0.81;
+    
+    navigate(`/game/${user.id}`, { 
+      state: { 
+        gameId: data.gameId,
+        gameNumber: data.gameNumber,
+        prizePool: data.prizePool,
+        winnerAmount: winnerAmt,
+        isSpectator: false,           // This is a PLAYER
+        selectedCartelas: selectedCartelas 
+      } 
+    });
+  } else {
+    // SPECTATOR - User is just watching (joined late or waiting)
+    console.log('User is a SPECTATOR, watching live game');
+    setIsGameActive(true);
+    setWaitingMessage('🎮 Watching live game...');
+    
+    const winnerAmt = (data.prizePool || 0) * 0.81;
+    
+    navigate(`/game/${user.id}`, { 
+      state: { 
+        gameId: data.gameId,
+        gameNumber: data.gameNumber,
+        prizePool: data.prizePool,
+        winnerAmount: winnerAmt,
+        isSpectator: true,            // This is a SPECTATOR
+        selectedCartelas: []          // Spectators have no cartelas
+      } 
+    });
+  }
+  
+  toast.success(data.message);
+});
+
+
+  
     return () => {
       if (newSocket) newSocket.disconnect();
     };

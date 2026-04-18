@@ -31,8 +31,15 @@ const GameRoom = ({ user }) => {
 const [winningCells, setWinningCells] = useState([]);
 
   const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
-
+ // Check if user is spectator
+  const isSpectator = location.state?.isSpectator || false;
   // Load cartelas from location state or localStorage
+  
+    // For spectators, we don't need cartelas
+  const [selectedCartelas, setSelectedCartelas] = useState(
+    isSpectator ? [] : (location.state?.selectedCartelas || [])
+  );
+  
   useEffect(() => {
     console.log('=== GAMEROOM LOADING CARTELAS ===');
     console.log('Location state:', location.state);
@@ -59,6 +66,8 @@ const [winningCells, setWinningCells] = useState([]);
     }
   }, [location.state, user]);
 
+  
+  
   const fetchUserCartelas = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/game/user-cartelas/${user.id}`, {
@@ -163,7 +172,16 @@ const [winningCells, setWinningCells] = useState([]);
 	  
 	  
       setGameActive(false);
+	  
+	  
+	    // Redirect spectators to home after game ends
+  if (isSpectator) {
+    setTimeout(() => {
+      navigate('/');
+    }, 6000);
+  } else {
       localStorage.removeItem('userCartelas');
+  }
     });
     
     newSocket.on('invalid-bingo', (data) => {
@@ -423,6 +441,9 @@ const renderWinningCartela = (cardData, winningCells) => {
       </div>
       
       <div className="game-content">
+	{/* Only show cartelas and BINGO button for players (not spectators) */}
+{!isSpectator && (
+  <>  
         <div className="cartelas-section">
           <h3>Your Cartelas ({selectedCartelas.length}/2)</h3>
           <div className="cartelas-container">
@@ -439,11 +460,21 @@ const renderWinningCartela = (cardData, winningCells) => {
             )}
           </div>
         </div>
-        
+        </>
+)}  
+
+{/* Spectator badge */}
+{isSpectator && (
+  <div className="spectator-badge">
+    👁️ Watching Live Game - You'll be able to play in the next game!
+  </div>
+)}		
+		
         <div className="called-numbers-section">
           {renderRecentCalls()}
           {renderBingoBoard()}
         </div>
+		
       </div>
       
       <div className="game-footer">
