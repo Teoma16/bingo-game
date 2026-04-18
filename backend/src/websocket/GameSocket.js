@@ -445,6 +445,12 @@ async handleAutoMark(socket, { userId, number }) {
   });
   
   const gameNumber = await this.getNextGameNumber();
+  
+  // Delete old game players only for the previous game
+  if (this.currentGame) {
+    await GamePlayer.destroy({ where: { game_id: this.currentGame.id } });
+  }
+  
   this.currentGame = await Game.create({
     game_number: gameNumber,
     status: 'waiting',
@@ -465,72 +471,63 @@ async handleAutoMark(socket, { userId, number }) {
 }
 
   async startWaitingPeriod() {
-    let waitingTime = 35;
-    let countdownInterval = null;
-    let playerCheckInterval = null;
-    let isGameStarting = false;
-    
-	  // CRITICAL: Clear all previous game data for new waiting period
-  // Reset all players' cartelas and marked numbers
- 
-
-
-// this.players.forEach(player => {
- //   player.cartelaIds = [];
-  //  player.markedNumbers = [];
-  //});
-	  // Also clear any stored game data in the database for this game
-  if (this.currentGame) {
-    // Clear game players records for the new game
-    await GamePlayer.destroy({ where: { game_id: this.currentGame.id } });
-  }
-	
-    this.io.emit('game-waiting', {
-      prepareTime: waitingTime,
-      message: 'Game starting soon! Select your lucky numbers!'
-    });
-    
-	  // Also emit that all numbers are now available
+  let waitingTime = 35;
+  let countdownInterval = null;
+  let playerCheckInterval = null;
+  let isGameStarting = false;
+  
+  // ✅ DO NOT clear players' cartelas - they should keep their selections
+  // The commented code is correct - leave it commented
+  
+  // ⚠️ IMPORTANT: Only clear database records for COMPLETED games, not during waiting
+  // Remove this line - it's causing the deselection:
+  // await GamePlayer.destroy({ where: { game_id: this.currentGame.id } });
+  
+  this.io.emit('game-waiting', {
+    prepareTime: waitingTime,
+    message: 'Game starting soon! Select your lucky numbers!'
+  });
+  
+  // Also emit that all numbers are now available
   const allNumbers = [];
   for (let i = 1; i <= 200; i++) allNumbers.push(i);
   this.io.emit('cartela-availability', {
     availableNumbers: allNumbers,
     takenNumbers: []
   });
-	
-    countdownInterval = setInterval(() => {
-      if (waitingTime > 0) {
-        waitingTime--;
-        this.io.emit('countdown-update', { timeRemaining: waitingTime });
-      }
-    }, 1000);
+  
+  countdownInterval = setInterval(() => {
+    if (waitingTime > 0) {
+      waitingTime--;
+      this.io.emit('countdown-update', { timeRemaining: waitingTime });
+    }
+  }, 1000);
+  
+  playerCheckInterval = setInterval(async () => {
+    const playerCount = this.getUniquePlayerCount();
     
-    playerCheckInterval = setInterval(async () => {
-      const playerCount = this.getUniquePlayerCount();
-      
-      if (isGameStarting) return;
-      
-      if (waitingTime <= 0 && playerCount >= 2 && !isGameStarting) {
-        console.log('Starting game!');
-        isGameStarting = true;
-        clearInterval(countdownInterval);
-        clearInterval(playerCheckInterval);
-        await this.startGame();
-      } 
-      else if (waitingTime <= 0 && playerCount < 2 && !isGameStarting) {
-       // console.log(`Not enough players (${playerCount}/2). Resetting...`);
-	   console.log(`Not enough players. Resetting...`);
-        waitingTime = 35;
-        this.io.emit('game-waiting', {
-          prepareTime: waitingTime,
-         // message: `Not enough players /*(${playerCount}/2)*/. Waiting...`
-		   message: `Not enough players. Waiting...`
-        });
-      }
-    }, 1000);
+    if (isGameStarting) return;
     
-    this.waitingIntervals = { countdownInterval, playerCheckInterval };
-  }
+    if (waitingTime <= 0 && playerCount >= 2 && !isGameStarting) {
+      console.log(`Starting game with ${playerCount} players!`);
+      isGameStarting = true;
+      clearInterval(countdownInterval);
+      clearInterval(playerCheckInterval);
+      await this.startGame();
+    } 
+    else if (waitingTime <= 0 && playerCount < 2 && !isGameStarting) {
+      console.log(`Not enough players (${playerCount}/2). Resetting counter...`);
+      waitingTime = 35;
+      // ✅ DO NOT clear any player data here - just reset the counter
+      this.io.emit('game-waiting', {
+        prepareTime: waitingTime,
+        message: `Not enough players (${playerCount}/2). Waiting for more players...`
+      });
+    }
+  }, 1000);
+  
+  this.waitingIntervals = { countdownInterval, playerCheckInterval };
+}
 
   async startGame() {
 	   console.log(`🎮 GAME STARTED - Game ID: ${this.currentGame.id}`);
