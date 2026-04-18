@@ -228,7 +228,7 @@ const handleWithdraw = async () => {
     
     // Initialize WebSocket
   //  const newSocket = io('https://bingo-game-production-dd0b.up.railway.app');
-  const newSocket = io('http://bingo-game-production-dd0b.up.railway.app', {
+  const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
   transports: ['websocket', 'polling']
  // withCredentials: false
 });
