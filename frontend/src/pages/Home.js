@@ -392,20 +392,26 @@ newSocket.on('game-started', (data) => {
  */ 
 newSocket.on('game-started', (data) => {
   console.log('Game started! Prize pool:', data.prizePool);
-  console.log('Selected cartelas before navigate:', selectedCartelas);
   
-  // Check if current user is a PLAYER (has selected cartelas) or SPECTATOR
-  const hasSelectedCartelas = selectedCartelas.length > 0;
+  // IMPORTANT: Read from localStorage instead of state
+  const savedCartelas = localStorage.getItem('userCartelas');
+  let hasSelectedCartelas = false;
+  let cartelasToSend = [];
+  
+  if (savedCartelas) {
+    cartelasToSend = JSON.parse(savedCartelas);
+    hasSelectedCartelas = cartelasToSend.length > 0;
+    console.log('Found cartelas in localStorage:', cartelasToSend.length);
+  } else {
+    console.log('No cartelas found in localStorage');
+  }
+  
   console.log('hasSelectedCartelas:', hasSelectedCartelas);
   
   if (hasSelectedCartelas) {
-    // PLAYER - User is participating in this game
     console.log('User is a PLAYER, joining the game');
     setIsGameActive(true);
     setWaitingMessage('🎮 Game started! You are playing...');
-    
-    // Save cartelas for the game
-    localStorage.setItem('userCartelas', JSON.stringify(selectedCartelas));
     
     const winnerAmt = (data.prizePool || 0) * 0.81;
     
@@ -415,12 +421,11 @@ newSocket.on('game-started', (data) => {
         gameNumber: data.gameNumber,
         prizePool: data.prizePool,
         winnerAmount: winnerAmt,
-        isSpectator: false,           // This is a PLAYER
-        selectedCartelas: selectedCartelas 
+        isSpectator: false,
+        selectedCartelas: cartelasToSend 
       } 
     });
   } else {
-    // SPECTATOR - User is just watching (joined late or waiting)
     console.log('User is a SPECTATOR, watching live game');
     setIsGameActive(true);
     setWaitingMessage('🎮 Watching live game...');
@@ -433,8 +438,8 @@ newSocket.on('game-started', (data) => {
         gameNumber: data.gameNumber,
         prizePool: data.prizePool,
         winnerAmount: winnerAmt,
-        isSpectator: true,            // This is a SPECTATOR
-        selectedCartelas: []          // Spectators have no cartelas
+        isSpectator: true,
+        selectedCartelas: [] 
       } 
     });
   }
