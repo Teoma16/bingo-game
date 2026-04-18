@@ -18,7 +18,7 @@ const GameRoom = ({ user }) => {
   const [prizePool, setPrizePool] = useState(location.state?.prizePool || 0);
   const [winnerAmount, setWinnerAmount] = useState(location.state?.winnerAmount || 0);
   const [gameActive, setGameActive] = useState(true);
-  const [selectedCartelas, setSelectedCartelas] = useState([]);
+  //const [selectedCartelas, setSelectedCartelas] = useState([]);
   const [markedNumbers, setMarkedNumbers] = useState([]);
   const [autoMark, setAutoMark] = useState(true);
   const [callCount, setCallCount] = useState(0);
