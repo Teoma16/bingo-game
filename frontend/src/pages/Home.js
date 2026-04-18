@@ -331,6 +331,7 @@ newSocket.on('game-state', (data) => {
 		 // setTakenNumbers([]);
   //setSelectedNumbers([]);
   //setSelectedCartelas([]);
+  setWinnerAmount(0);  // ← ADD THIS
   setIsGameActive(false);
   setWaitingMessage('');
     // Also clear localStorage for new game

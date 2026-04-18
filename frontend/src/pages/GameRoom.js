@@ -185,7 +185,9 @@ const [winningCells, setWinningCells] = useState([]);
 	  
 	  
       setGameActive(false);
-	  
+	    // Reset prize pool for next game
+  setPrizePool(0);      // ← ADD THIS
+  setWinnerAmount(0);   // ← ADD THIS
 	  
 	    // Redirect spectators to home after game ends
   if (isSpectator) {
