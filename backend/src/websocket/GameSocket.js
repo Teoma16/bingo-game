@@ -472,10 +472,13 @@ async handleAutoMark(socket, { userId, number }) {
     
 	  // CRITICAL: Clear all previous game data for new waiting period
   // Reset all players' cartelas and marked numbers
-  this.players.forEach(player => {
-    player.cartelaIds = [];
-    player.markedNumbers = [];
-  });
+ 
+
+
+// this.players.forEach(player => {
+ //   player.cartelaIds = [];
+  //  player.markedNumbers = [];
+  //});
 	  // Also clear any stored game data in the database for this game
   if (this.currentGame) {
     // Clear game players records for the new game
