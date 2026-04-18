@@ -396,6 +396,7 @@ newSocket.on('game-started', (data) => {
   
   // Check if current user is a PLAYER (has selected cartelas) or SPECTATOR
   const hasSelectedCartelas = selectedCartelas.length > 0;
+  console.log('hasSelectedCartelas:', hasSelectedCartelas);
   
   if (hasSelectedCartelas) {
     // PLAYER - User is participating in this game
