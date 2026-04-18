@@ -227,7 +227,11 @@ const handleWithdraw = async () => {
     fetchAdvertisement();
     
     // Initialize WebSocket
-    const newSocket = io('https://bingo-game-production-dd0b.up.railway.app');
+  //  const newSocket = io('https://bingo-game-production-dd0b.up.railway.app');
+  const newSocket = io('http://bingo-game-production-dd0b.up.railway.app', {
+  transports: ['websocket', 'polling']
+ // withCredentials: false
+});
     setSocket(newSocket);
     
     // Generate lucky numbers 1-100

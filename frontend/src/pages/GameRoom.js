@@ -84,7 +84,11 @@ const [winningCells, setWinningCells] = useState([]);
   };
 
   useEffect(() => {
-    const newSocket = io(API_URL);
+   // const newSocket = io(API_URL);
+   const newSocket = io('http://bingo-game-production-dd0b.up.railway.app', {
+  transports: ['websocket', 'polling']
+  //withCredentials: false
+});
     setSocket(newSocket);
     
     if (user && user.id) {

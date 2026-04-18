@@ -8,9 +8,10 @@ class GameSocket {
       cors: {
         origin: "*",
         methods: ["GET", "POST"],
-        credentials: true,
+        credentials: false,
         allowedHeaders: ["Content-Type", "Authorization"]
-      }
+      },
+  transports: ['websocket', 'polling']  // Add this
     });
     this.gameService = new GameService();
     this.currentGame = null;
