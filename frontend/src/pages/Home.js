@@ -263,23 +263,43 @@ newSocket.on('registered', (data) => {
   console.log('Registered:', data);
   setBalance(data.user.wallet_balance);
   
-  // NEW: Check current game status
+  // Check if game is already ACTIVE
   if (data.gameStatus === 'active') {
-    setIsGameActive(true);
-    setWaitingMessage('🎮 A game is currently in progress. Please wait for the next game...');
-	if (data.takenNumbers) {
-      setTakenNumbers(data.takenNumbers);
-    }
-  } else {
-    setIsGameActive(false);
-    setWaitingMessage('');
-	  setTakenNumbers([]);
+    console.log('Game is already active - redirecting to watch as spectator');
+    
+    // Redirect to GameRoom as spectator immediately
+    navigate(`/game/${user.id}`, { 
+      state: { 
+        gameId: data.gameId,
+        gameNumber: data.gameNumber,
+        prizePool: data.prizePool,
+        winnerAmount: data.winnerAmount || 0,
+        isSpectator: true,
+        selectedCartelas: [] 
+      } 
+    });
+    return;
+  }
+  
+  // If game is WAITING (not active), show waiting UI
+  console.log('Game is waiting - showing selection UI');
+  setIsGameActive(false);
+  setWaitingMessage('');
+  
+ if (data.totalPlayers === 0 && data.totalCartelas === 0) {
+    console.log('Brand new game - resetting selections');
+    setTakenNumbers([]);
     setSelectedNumbers([]);
     setSelectedCartelas([]);
-  } 
+    localStorage.removeItem('userCartelas');
+  } else {
+    // Keep existing selections, just update taken numbers
+    console.log('Preserving existing selections');
+    if (data.takenNumbers) {
+      setTakenNumbers(data.takenNumbers);
+    }
+  }
   
-  // Set initial taken numbers from server
- 
   if (data.prizePool) {
     setWinnerAmount(data.winnerAmount || 0);
   }
