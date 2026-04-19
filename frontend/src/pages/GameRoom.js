@@ -193,7 +193,7 @@ const [winningCells, setWinningCells] = useState([]);
   if (isSpectator) {
     setTimeout(() => {
       navigate('/');
-    }, 6000);
+    }, 5000);
   } else {
       localStorage.removeItem('userCartelas');
   }
