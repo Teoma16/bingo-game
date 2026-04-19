@@ -1099,7 +1099,7 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   // Start new game
   setTimeout(() => {
     this.startNewGame();
-  }, 9000);
+  }, 5000);
 }
 // Helper method to find winning pattern
 findWinningPatternCells(cartelaData, markedNumbers) {
