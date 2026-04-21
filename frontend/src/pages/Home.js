@@ -20,7 +20,7 @@ const Home = ({ user, setUser }) => {
   const [adData, setAdData] = useState(null);
   const [showFooter, setShowFooter] = useState(false);
   const [takenNumbers, setTakenNumbers] = useState([]);
-
+const [withdrawableBalance, setWithdrawableBalance] = useState(0);
 // Add this state with your other states
 const [isGameActive, setIsGameActive] = useState(false);
 const [waitingMessage, setWaitingMessage] = useState('');
@@ -54,6 +54,13 @@ const fetchTransactions = async () => {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     setTransactions(response.data);
+// ALSO fetch balance info (new)
+    const balanceResponse = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/balance/${user.id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    setBalance(balanceResponse.data.totalBalance);
+    setWithdrawableBalance(balanceResponse.data.withdrawableBalance);
+
   } catch (error) {
     console.error('Failed to fetch transactions:', error);
   }
@@ -674,6 +681,11 @@ newSocket.on('game-started', (data) => {
         <div className="current-balance">
           <h3>Current Balance</h3>
           <p className="balance-amount">{balance} Birr</p>
+          <div className="balance-breakdown">
+    <p>🏆 Withdrawable (Winnings): {withdrawableBalance} Birr</p>
+    <p>📥 Deposits & Bonus: {balance - withdrawableBalance} Birr</p>
+  </div>
+  <p className="note">⚠️ Only winnings can be withdrawn</p>
         </div>
         
         {/* Recent Winnings Section */}

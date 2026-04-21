@@ -768,3 +768,21 @@ padding-bottom:6px;
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.9; transform: scale(1.01); }
 }
+
+.balance-breakdown {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.balance-breakdown p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.note {
+  font-size: 11px;
+  color: #ffaa00;
+  margin-top: 10px;
+}

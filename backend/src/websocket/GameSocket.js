@@ -1069,11 +1069,15 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   
   if (user) {
     user.wallet_balance = parseFloat(user.wallet_balance) + roundedPrize;
+     // NEW LINE - tracks withdrawable balance (only winnings)
+    user.withdrawable_balance = (parseFloat(user.withdrawable_balance) || 0) + roundedPrize;
     user.total_won += 1;
     await user.save();
   }
-  
+
   // Mark game as completed
+  
+  
   this.currentGame.status = 'completed';
   this.currentGame.winner_ids = [winnerId];
   this.currentGame.winner_amount = roundedPrize;
