@@ -570,7 +570,11 @@ newSocket.on('game-started', (data) => {
       <div className="header">
         <div className="user-info">
           <h3>👤 {user?.username || user?.phone_number}</h3>
-          <p>💰 Balance: {balance} Birr</p>
+          <div className="balance-info">
+      <p>💰 Total Balance: {balance} Birr</p>
+      <p>🏆 Winnings (Withdrawable): {withdrawableBalance} Birr</p>
+      <p>📥 Deposits & Bonus: {balance - withdrawableBalance} Birr</p>
+    </div>
         </div>
         <div className="game-info">
           <div className="winner-prize">🏆 ደራሽ : {Math.max(0, winnerAmount).toFixed(2)} Birr</div>

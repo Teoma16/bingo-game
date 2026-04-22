@@ -243,9 +243,23 @@ async checkForWinnersManual(userId) {
       socket.emit('error', { message: 'User not found' });
       return;
     }
-    
+      
+  // Optional: Show breakdown to player
+  const depositBonusBalance = user.wallet_balance - user.withdrawable_balance;
+  socket.emit('info', {
+    message: `Fee will be deducted from deposit/bonus first. Deposit/Bonus: ${depositBonusBalance} Birr, Winnings: ${user.withdrawable_balance} Birr`
+  });
     const newTotalCartelas = player.cartelaIds.length + 1;
     const totalCost = newTotalCartelas * 10;
+    
+      // Check total balance
+  if (user.wallet_balance < totalCost) {
+    socket.emit('error', { 
+      message: `Insufficient balance! Need ${totalCost} Birr. Your total balance: ${user.wallet_balance} Birr` 
+    });
+    return;
+  }
+    
     
     const userBalance = parseFloat(user.wallet_balance) || 0;
     
@@ -534,59 +548,87 @@ async handleAutoMark(socket, { userId, number }) {
 }
 
   async startGame() {
-	   console.log(`🎮 GAME STARTED - Game ID: ${this.currentGame.id}`);
-    this.currentGame = await Game.findByPk(this.currentGame.id);
-    
-    const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
-    console.log(`Starting game with prize pool: ${currentPrizePool}`);
-    
-    const playerCount = this.getUniquePlayerCount();
-    if (playerCount < 2) {
-      this.startWaitingPeriod();
-      return;
-    }
-    
-    for (const [socketId, player] of this.players) {
-      if (player.cartelaIds.length > 0) {
-        const user = await User.findByPk(player.userId);
-        if (user && user.wallet_balance >= player.cartelaIds.length * 10) {
-          const totalAmount = player.cartelaIds.length * 10;
-          const oldBalance = parseFloat(user.wallet_balance) || 0;
-          const newBalance = oldBalance - totalAmount;
-          
-          user.wallet_balance = newBalance;
-          await user.save();
-          
-          await Transaction.create({
-            user_id: player.userId,
-            type: 'game_fee',
-            amount: -totalAmount,
-            balance_after: newBalance,
-            status: 'completed',
-            description: `Game entry fee for ${player.cartelaIds.length} cartela(s)`
-          });
+  console.log(`🎮 GAME STARTED - Game ID: ${this.currentGame.id}`);
+  this.currentGame = await Game.findByPk(this.currentGame.id);
+  
+  const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
+  console.log(`Starting game with prize pool: ${currentPrizePool}`);
+  
+  const playerCount = this.getUniquePlayerCount();
+  if (playerCount < 2) {
+    this.startWaitingPeriod();
+    return;
+  }
+  
+  for (const [socketId, player] of this.players) {
+    if (player.cartelaIds.length > 0) {
+      const user = await User.findByPk(player.userId);
+      if (user) {
+        const totalAmount = player.cartelaIds.length * 10;
+        
+        // Check total balance
+        if (user.wallet_balance < totalAmount) {
+          console.log(`User ${player.userId} has insufficient balance. Total: ${user.wallet_balance}, Need: ${totalAmount}`);
+          continue;
         }
+        
+        // Calculate deposit/bonus balance (non-withdrawable)
+        const depositBonusBalance = user.wallet_balance - user.withdrawable_balance;
+        
+        // Deduct from deposit/bonus first, then from winnings
+        let remainingToDeduct = totalAmount;
+        let deductFromDeposit = Math.min(depositBonusBalance, remainingToDeduct);
+        let deductFromWinnings = remainingToDeduct - deductFromDeposit;
+        
+        // Update balances
+        const oldTotalBalance = parseFloat(user.wallet_balance) || 0;
+        const newTotalBalance = oldTotalBalance - totalAmount;
+        
+        user.wallet_balance = newTotalBalance;
+        
+        // Update withdrawable balance (only if deducting from winnings)
+        if (deductFromWinnings > 0) {
+          user.withdrawable_balance = (parseFloat(user.withdrawable_balance) || 0) - deductFromWinnings;
+        }
+        
+        await user.save();
+        
+        console.log(`✅ Deducted ${totalAmount} Birr from user ${player.userId}`);
+        console.log(`   From Deposit/Bonus: ${deductFromDeposit} Birr`);
+        console.log(`   From Winnings: ${deductFromWinnings} Birr`);
+        console.log(`   New Total Balance: ${newTotalBalance} Birr`);
+        console.log(`   New Withdrawable Balance: ${user.withdrawable_balance} Birr`);
+        
+        await Transaction.create({
+          user_id: player.userId,
+          type: 'game_fee',
+          amount: -totalAmount,
+          balance_after: newTotalBalance,
+          status: 'completed',
+          description: `Game entry fee for ${player.cartelaIds.length} cartela(s)`
+        });
       }
     }
-    
-    this.currentGame.status = 'active';
-    this.currentGame.start_time = new Date();
-    this.currentGame.total_players = this.getUniquePlayerCount();
-    this.currentGame.commission = currentPrizePool * 0.19;
-    await this.currentGame.save();
-    
-    const winnerAmount = Math.round((currentPrizePool * 0.81) * 100) / 100;
-    
-    this.io.emit('game-started', {
-      gameId: this.currentGame.id,
-      gameNumber: this.currentGame.game_number,
-      prizePool: currentPrizePool,
-      winnerAmount: winnerAmount,
-      message: 'Game Started!'
-    });
-    
-    this.callNumbers();
   }
+  
+  this.currentGame.status = 'active';
+  this.currentGame.start_time = new Date();
+  this.currentGame.total_players = this.getUniquePlayerCount();
+  this.currentGame.commission = currentPrizePool * 0.19;
+  await this.currentGame.save();
+  
+  const winnerAmount = Math.round((currentPrizePool * 0.81) * 100) / 100;
+  
+  this.io.emit('game-started', {
+    gameId: this.currentGame.id,
+    gameNumber: this.currentGame.game_number,
+    prizePool: currentPrizePool,
+    winnerAmount: winnerAmount,
+    message: 'Game Started!'
+  });
+  
+  this.callNumbers();
+}
 
   callNumbers() {
   const allNumbers = [];

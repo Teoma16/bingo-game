@@ -786,3 +786,12 @@ padding-bottom:6px;
   color: #ffaa00;
   margin-top: 10px;
 }
+
+.balance-info {
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.balance-info p {
+  margin: 2px 0;
+}
