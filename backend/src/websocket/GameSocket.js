@@ -1061,64 +1061,45 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   return false;
 }
 
-  async processWin(winnerId) {
+ async processWin(winnerId) {
   console.log(`\n🏆 PROCESSING WINNER: ${winnerId}`);
   
-  // Stop the game
   if (this.gameInterval) {
     clearInterval(this.gameInterval);
     this.gameInterval = null;
   }
   
-   // Find the winning cartela and pattern
-  let winningCartelaInfo = null;
-  let winningCellsInfo = [];
-  
-  for (const [socketId, player] of this.players) {
-    if (player.userId === winnerId) {
-      const marked = player.markedNumbers || [];
-      
-   for (const luckyNumber of player.cartelaIds) {
-        const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
-        if (cartela) {
-          // Check if this cartela has a winning pattern
-          const hasWon = this.checkAllWinPatterns(cartela.card_data, marked);
-          if (hasWon) {
-            // Find which pattern won
-            winningCellsInfo = this.findWinningPatternCells(cartela.card_data, marked);
-            winningCartelaInfo = {
-              lucky_number: luckyNumber,
-              card_data: cartela.card_data
-            };
-            console.log(`🎯 Winning cartela #${luckyNumber} with ${winningCellsInfo.length} winning cells`);
-            break;
-          }
-        }
-      }
-      break;
-    }
-  }
-  
-  
-  // Calculate prize
   const prizePoolNum = parseFloat(this.currentGame.prize_pool) || 0;
   const totalPrize = (prizePoolNum * 81) / 100;
   const roundedPrize = Math.round(totalPrize * 100) / 100;
   
-  // Credit winner in database
   const user = await User.findByPk(winnerId);
   const winnerName = user?.username || user?.phone_number || `Player ${winnerId}`;
   
   if (user) {
-    user.wallet_balance = parseFloat(user.wallet_balance) + roundedPrize;
-     // NEW LINE - tracks withdrawable balance (only winnings)
-    user.withdrawable_balance = (parseFloat(user.withdrawable_balance) || 0) + roundedPrize;
-    user.total_won += 1;
+    const oldBalance = parseFloat(user.wallet_balance) || 0;
+    const oldWithdrawable = parseFloat(user.withdrawable_balance) || 0;
+    const newBalance = oldBalance + roundedPrize;
+    const newWithdrawable = oldWithdrawable + roundedPrize;  // ← ADD WINNINGS TO WITHDRAWABLE
+    
+    user.wallet_balance = newBalance;
+    user.withdrawable_balance = newWithdrawable;  // ← UPDATE WITHDRAWABLE
+    user.total_won = (user.total_won || 0) + 1;
     await user.save();
+    
+    console.log(`💰 Winner ${winnerId}:`);
+    console.log(`   Old Balance: ${oldBalance}, New Balance: ${newBalance}`);
+    console.log(`   Old Withdrawable: ${oldWithdrawable}, New Withdrawable: ${newWithdrawable}`);
+    
+    await Transaction.create({
+      user_id: winnerId,
+      type: 'prize',
+      amount: roundedPrize,
+      balance_after: newBalance,
+      status: 'completed',
+      description: `Won ${roundedPrize} Birr from game #${this.currentGame.game_number}`
+    });
   }
-
-  // Mark game as completed
-  
   
   this.currentGame.status = 'completed';
   this.currentGame.winner_ids = [winnerId];
@@ -1126,23 +1107,12 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   this.currentGame.end_time = new Date();
   await this.currentGame.save();
   
-  // Announce winner
-   this.io.emit('game-ended', {
-    winners: [{ 
-      userId: winnerId, 
-      username: winnerName, 
-      amount: roundedPrize,
-      cartela: winningCartelaInfo,
-      winningCells: winningCellsInfo
-    }],
+  this.io.emit('game-ended', {
+    winners: [{ userId: winnerId, username: winnerName, amount: roundedPrize }],
     prizeAmount: roundedPrize,
     message: `🎉 BINGO! ${winnerName} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
   });
   
-  // Clear all player memory
-  this.players.clear();
-  
-  // Start new game
   setTimeout(() => {
     this.startNewGame();
   }, 5000);
