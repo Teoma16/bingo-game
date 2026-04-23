@@ -37,6 +37,8 @@ const [depositAmount, setDepositAmount] = useState(null);
 const [depositSms, setDepositSms] = useState('');
 const [depositStatus, setDepositStatus] = useState('');
   // Fetch cartela data
+
+  
   const fetchCartela = async (luckyNumber) => {
     try {
       const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/cartela/${luckyNumber}`);
@@ -63,6 +65,18 @@ const fetchTransactions = async () => {
 
   } catch (error) {
     console.error('Failed to fetch transactions:', error);
+  }
+};
+const fetchBalances = async () => {
+  try {
+    const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/balance/${user.id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    console.log('Balance response:', response.data);
+    setBalance(response.data.totalBalance);
+    setWithdrawableBalance(response.data.withdrawableBalance || 0);
+  } catch (error) {
+    console.error('Failed to fetch balances:', error);
   }
 };
 const fetchGameHistory = async () => {

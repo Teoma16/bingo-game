@@ -1077,25 +1077,23 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   const winnerName = user?.username || user?.phone_number || `Player ${winnerId}`;
   
   if (user) {
-    const oldBalance = parseFloat(user.wallet_balance) || 0;
-    const oldWithdrawable = parseFloat(user.withdrawable_balance) || 0;
-    const newBalance = oldBalance + roundedPrize;
-    const newWithdrawable = oldWithdrawable + roundedPrize;  // ← ADD WINNINGS TO WITHDRAWABLE
+    console.log(`Before update - Wallet: ${user.wallet_balance}, Withdrawable: ${user.withdrawable_balance}`);
     
-    user.wallet_balance = newBalance;
-    user.withdrawable_balance = newWithdrawable;  // ← UPDATE WITHDRAWABLE
+    // Update both balances
+    user.wallet_balance = parseFloat(user.wallet_balance) + roundedPrize;
+    user.withdrawable_balance = (parseFloat(user.withdrawable_balance) || 0) + roundedPrize;
     user.total_won = (user.total_won || 0) + 1;
+    
     await user.save();
     
-    console.log(`💰 Winner ${winnerId}:`);
-    console.log(`   Old Balance: ${oldBalance}, New Balance: ${newBalance}`);
-    console.log(`   Old Withdrawable: ${oldWithdrawable}, New Withdrawable: ${newWithdrawable}`);
+    console.log(`After update - Wallet: ${user.wallet_balance}, Withdrawable: ${user.withdrawable_balance}`);
+    console.log(`✅ Added ${roundedPrize} to withdrawable_balance`);
     
     await Transaction.create({
       user_id: winnerId,
       type: 'prize',
       amount: roundedPrize,
-      balance_after: newBalance,
+      balance_after: user.wallet_balance,
       status: 'completed',
       description: `Won ${roundedPrize} Birr from game #${this.currentGame.game_number}`
     });
