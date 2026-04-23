@@ -255,6 +255,7 @@ const handleWithdraw = async () => {
 };
 
   useEffect(() => {
+     fetchBalances();
     // Fetch advertisement
     fetchAdvertisement();
     
