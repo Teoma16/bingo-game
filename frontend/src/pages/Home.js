@@ -372,6 +372,7 @@ newSocket.on('game-ended', (data) => {
     // Request fresh game state
   newSocket.emit('get-game-state');
   toast.success('Game ended! You can now select lucky numbers for the next game.');
+   fetchBalances();
 });  
 
 

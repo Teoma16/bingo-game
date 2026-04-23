@@ -11,7 +11,7 @@ router.get('/balance/:userId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     res.json({ 
-      balance: user.wallet_balance,
+      totalBalance: user.wallet_balance,
       withdrawableBalance: user.withdrawable_balance 
     });
   } catch (error) {
