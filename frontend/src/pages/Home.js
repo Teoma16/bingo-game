@@ -68,6 +68,12 @@ const fetchTransactions = async () => {
   }
 };
 const fetchBalances = async () => {
+   const token = localStorage.getItem('token');
+  if (!token) {
+    console.log('No token found, skipping balance fetch');
+    return;
+  }
+  
   try {
     const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/balance/${user.id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -255,6 +261,16 @@ const handleWithdraw = async () => {
 };
 
   useEffect(() => {
+	  
+	   // Check if user is logged in
+  const token = localStorage.getItem('token');
+  const savedUser = localStorage.getItem('user');
+  
+  if (!token || !savedUser) {
+    // Redirect to login if not logged in
+    navigate('/login');
+    return;
+  }
      fetchBalances();
     // Fetch advertisement
     fetchAdvertisement();
