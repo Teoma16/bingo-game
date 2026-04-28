@@ -316,20 +316,7 @@ router.post('/approve-withdrawal', verifyAdminToken, async (req, res) => {
     if (!withdrawal) {
       return res.status(404).json({ error: 'Withdrawal not found' });
     }
-     if (withdrawal.status !== 'pending') {
-      return res.status(400).json({ error: 'Withdrawal already processed' });
-    }
     
-    // Get the user
-    const user = await User.findByPk(withdrawal.user_id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    // DEDUCT BALANCES HERE (ON APPROVAL)
-    user.withdrawable_balance -= withdrawal.amount;
-    user.wallet_balance -= withdrawal.amount;
-    await user.save();
     withdrawal.status = 'approved';
     withdrawal.approved_by = req.admin.adminId;
     withdrawal.approved_at = new Date();

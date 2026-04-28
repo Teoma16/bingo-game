@@ -149,11 +149,7 @@ socket.on('test-mark', async (data) => {
         takenNumbers: takenNumbers,
         prizePool: this.currentGame?.prize_pool || 0,
         winnerAmount: winnerAmount,
-		 gameStatus: this.currentGame?.status || 'waiting',  // Add this line
-		 gameId: this.currentGame?.id || null,        // ← ADD THIS
-  gameNumber: this.currentGame?.game_number || 0,  // ← ADD THIS
-   totalPlayers: this.currentGame?.total_players || 0,      // ← ADD THIS
-  totalCartelas: this.currentGame?.total_cartelas || 0    // ← ADD THIS
+		 gameStatus: this.currentGame?.status || 'waiting'  // Add this line
       });
       // Broadcast to ALL players that a new player joined (optional)
     this.io.emit('player-joined', { 
@@ -243,23 +239,9 @@ async checkForWinnersManual(userId) {
       socket.emit('error', { message: 'User not found' });
       return;
     }
-      
-  // Optional: Show breakdown to player
-  const depositBonusBalance = user.wallet_balance - user.withdrawable_balance;
-  socket.emit('info', {
-    message: `Fee will be deducted from deposit/bonus first. Deposit/Bonus: ${depositBonusBalance} Birr, Winnings: ${user.withdrawable_balance} Birr`
-  });
+    
     const newTotalCartelas = player.cartelaIds.length + 1;
     const totalCost = newTotalCartelas * 10;
-    
-      // Check total balance
-  if (user.wallet_balance < totalCost) {
-    socket.emit('error', { 
-      message: `Insufficient balance! Need ${totalCost} Birr. Your total balance: ${user.wallet_balance} Birr` 
-    });
-    return;
-  }
-    
     
     const userBalance = parseFloat(user.wallet_balance) || 0;
     
@@ -463,12 +445,6 @@ async handleAutoMark(socket, { userId, number }) {
   });
   
   const gameNumber = await this.getNextGameNumber();
-  
-  // Delete old game players only for the previous game
-  if (this.currentGame) {
-    await GamePlayer.destroy({ where: { game_id: this.currentGame.id } });
-  }
-  
   this.currentGame = await Game.create({
     game_number: gameNumber,
     status: 'waiting',
@@ -489,146 +465,124 @@ async handleAutoMark(socket, { userId, number }) {
 }
 
   async startWaitingPeriod() {
-  let waitingTime = 35;
-  let countdownInterval = null;
-  let playerCheckInterval = null;
-  let isGameStarting = false;
-  
-  // ✅ DO NOT clear players' cartelas - they should keep their selections
-  // The commented code is correct - leave it commented
-  
-  // ⚠️ IMPORTANT: Only clear database records for COMPLETED games, not during waiting
-  // Remove this line - it's causing the deselection:
-  // await GamePlayer.destroy({ where: { game_id: this.currentGame.id } });
-  
-  this.io.emit('game-waiting', {
-    prepareTime: waitingTime,
-    message: 'Game starting soon! Select your lucky numbers!'
+    let waitingTime = 35;
+    let countdownInterval = null;
+    let playerCheckInterval = null;
+    let isGameStarting = false;
+    
+	  // CRITICAL: Clear all previous game data for new waiting period
+  // Reset all players' cartelas and marked numbers
+  this.players.forEach(player => {
+    player.cartelaIds = [];
+    player.markedNumbers = [];
   });
-  
-  // Also emit that all numbers are now available
+	  // Also clear any stored game data in the database for this game
+  if (this.currentGame) {
+    // Clear game players records for the new game
+    await GamePlayer.destroy({ where: { game_id: this.currentGame.id } });
+  }
+	
+    this.io.emit('game-waiting', {
+      prepareTime: waitingTime,
+      message: 'Game starting soon! Select your lucky numbers!'
+    });
+    
+	  // Also emit that all numbers are now available
   const allNumbers = [];
   for (let i = 1; i <= 200; i++) allNumbers.push(i);
   this.io.emit('cartela-availability', {
     availableNumbers: allNumbers,
     takenNumbers: []
   });
-  
-  countdownInterval = setInterval(() => {
-    if (waitingTime > 0) {
-      waitingTime--;
-      this.io.emit('countdown-update', { timeRemaining: waitingTime });
-    }
-  }, 1000);
-  
-  playerCheckInterval = setInterval(async () => {
-    const playerCount = this.getUniquePlayerCount();
+	
+    countdownInterval = setInterval(() => {
+      if (waitingTime > 0) {
+        waitingTime--;
+        this.io.emit('countdown-update', { timeRemaining: waitingTime });
+      }
+    }, 1000);
     
-    if (isGameStarting) return;
-    
-    if (waitingTime <= 0 && playerCount >= 2 && !isGameStarting) {
-      console.log(`Starting game with ${playerCount} players!`);
-      isGameStarting = true;
-      clearInterval(countdownInterval);
-      clearInterval(playerCheckInterval);
-      await this.startGame();
-    } 
-    else if (waitingTime <= 0 && playerCount < 2 && !isGameStarting) {
-      console.log(`Not enough players (${playerCount}/2). Resetting counter...`);
-      waitingTime = 35;
-      // ✅ DO NOT clear any player data here - just reset the counter
-      this.io.emit('game-waiting', {
-        prepareTime: waitingTime,
-        message: `Not enough players (${playerCount}/2). Waiting for more players...`
-      });
-    }
-  }, 1000);
-  
-  this.waitingIntervals = { countdownInterval, playerCheckInterval };
-}
-
-  async startGame() {
-  console.log(`🎮 GAME STARTED - Game ID: ${this.currentGame.id}`);
-  this.currentGame = await Game.findByPk(this.currentGame.id);
-  
-  const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
-  console.log(`Starting game with prize pool: ${currentPrizePool}`);
-  
-  const playerCount = this.getUniquePlayerCount();
-  if (playerCount < 2) {
-    this.startWaitingPeriod();
-    return;
-  }
-  
-  for (const [socketId, player] of this.players) {
-    if (player.cartelaIds.length > 0) {
-      const user = await User.findByPk(player.userId);
-      if (user) {
-        const totalAmount = player.cartelaIds.length * 10;
-        
-        // Check total balance
-        if (user.wallet_balance < totalAmount) {
-          console.log(`User ${player.userId} has insufficient balance. Total: ${user.wallet_balance}, Need: ${totalAmount}`);
-          continue;
-        }
-        
-        // Calculate deposit/bonus balance (non-withdrawable)
-        const depositBonusBalance = user.wallet_balance - user.withdrawable_balance;
-        
-        // Deduct from deposit/bonus first, then from winnings
-        let remainingToDeduct = totalAmount;
-        let deductFromDeposit = Math.min(depositBonusBalance, remainingToDeduct);
-        let deductFromWinnings = remainingToDeduct - deductFromDeposit;
-        
-        // Update balances
-        const oldTotalBalance = parseFloat(user.wallet_balance) || 0;
-        const newTotalBalance = oldTotalBalance - totalAmount;
-        
-        user.wallet_balance = newTotalBalance;
-        
-        // Update withdrawable balance (only if deducting from winnings)
-        if (deductFromWinnings > 0) {
-          user.withdrawable_balance = (parseFloat(user.withdrawable_balance) || 0) - deductFromWinnings;
-        }
-        
-        await user.save();
-        
-        console.log(`✅ Deducted ${totalAmount} Birr from user ${player.userId}`);
-        console.log(`   From Deposit/Bonus: ${deductFromDeposit} Birr`);
-        console.log(`   From Winnings: ${deductFromWinnings} Birr`);
-        console.log(`   New Total Balance: ${newTotalBalance} Birr`);
-        console.log(`   New Withdrawable Balance: ${user.withdrawable_balance} Birr`);
-        
-        await Transaction.create({
-          user_id: player.userId,
-          type: 'game_fee',
-          amount: -totalAmount,
-          balance_after: newTotalBalance,
-          status: 'completed',
-          description: `Game entry fee for ${player.cartelaIds.length} cartela(s)`
+    playerCheckInterval = setInterval(async () => {
+      const playerCount = this.getUniquePlayerCount();
+      
+      if (isGameStarting) return;
+      
+      if (waitingTime <= 0 && playerCount >= 2 && !isGameStarting) {
+        console.log('Starting game!');
+        isGameStarting = true;
+        clearInterval(countdownInterval);
+        clearInterval(playerCheckInterval);
+        await this.startGame();
+      } 
+      else if (waitingTime <= 0 && playerCount < 2 && !isGameStarting) {
+       // console.log(`Not enough players (${playerCount}/2). Resetting...`);
+	   console.log(`Not enough players. Resetting...`);
+        waitingTime = 35;
+        this.io.emit('game-waiting', {
+          prepareTime: waitingTime,
+         // message: `Not enough players /*(${playerCount}/2)*/. Waiting...`
+		   message: `Not enough players. Waiting...`
         });
       }
-    }
+    }, 1000);
+    
+    this.waitingIntervals = { countdownInterval, playerCheckInterval };
   }
-  
-  this.currentGame.status = 'active';
-  this.currentGame.start_time = new Date();
-  this.currentGame.total_players = this.getUniquePlayerCount();
-  this.currentGame.commission = currentPrizePool * 0.19;
-  await this.currentGame.save();
-  
-  const winnerAmount = Math.round((currentPrizePool * 0.81) * 100) / 100;
-  
-  this.io.emit('game-started', {
-    gameId: this.currentGame.id,
-    gameNumber: this.currentGame.game_number,
-    prizePool: currentPrizePool,
-    winnerAmount: winnerAmount,
-    message: 'Game Started!'
-  });
-  
-  this.callNumbers();
-}
+
+  async startGame() {
+	   console.log(`🎮 GAME STARTED - Game ID: ${this.currentGame.id}`);
+    this.currentGame = await Game.findByPk(this.currentGame.id);
+    
+    const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
+    console.log(`Starting game with prize pool: ${currentPrizePool}`);
+    
+    const playerCount = this.getUniquePlayerCount();
+    if (playerCount < 2) {
+      this.startWaitingPeriod();
+      return;
+    }
+    
+    for (const [socketId, player] of this.players) {
+      if (player.cartelaIds.length > 0) {
+        const user = await User.findByPk(player.userId);
+        if (user && user.wallet_balance >= player.cartelaIds.length * 10) {
+          const totalAmount = player.cartelaIds.length * 10;
+          const oldBalance = parseFloat(user.wallet_balance) || 0;
+          const newBalance = oldBalance - totalAmount;
+          
+          user.wallet_balance = newBalance;
+          await user.save();
+          
+          await Transaction.create({
+            user_id: player.userId,
+            type: 'game_fee',
+            amount: -totalAmount,
+            balance_after: newBalance,
+            status: 'completed',
+            description: `Game entry fee for ${player.cartelaIds.length} cartela(s)`
+          });
+        }
+      }
+    }
+    
+    this.currentGame.status = 'active';
+    this.currentGame.start_time = new Date();
+    this.currentGame.total_players = this.getUniquePlayerCount();
+    this.currentGame.commission = currentPrizePool * 0.19;
+    await this.currentGame.save();
+    
+    const winnerAmount = Math.round((currentPrizePool * 0.81) * 100) / 100;
+    
+    this.io.emit('game-started', {
+      gameId: this.currentGame.id,
+      gameNumber: this.currentGame.game_number,
+      prizePool: currentPrizePool,
+      winnerAmount: winnerAmount,
+      message: 'Game Started!'
+    });
+    
+    this.callNumbers();
+  }
 
   callNumbers() {
   const allNumbers = [];
@@ -1061,59 +1015,87 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
   return false;
 }
 
- async processWin(winnerId) {
+  async processWin(winnerId) {
   console.log(`\n🏆 PROCESSING WINNER: ${winnerId}`);
   
+  // Stop the game
   if (this.gameInterval) {
     clearInterval(this.gameInterval);
     this.gameInterval = null;
   }
   
+   // Find the winning cartela and pattern
+  let winningCartelaInfo = null;
+  let winningCellsInfo = [];
+  
+  for (const [socketId, player] of this.players) {
+    if (player.userId === winnerId) {
+      const marked = player.markedNumbers || [];
+      
+   for (const luckyNumber of player.cartelaIds) {
+        const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+        if (cartela) {
+          // Check if this cartela has a winning pattern
+          const hasWon = this.checkAllWinPatterns(cartela.card_data, marked);
+          if (hasWon) {
+            // Find which pattern won
+            winningCellsInfo = this.findWinningPatternCells(cartela.card_data, marked);
+            winningCartelaInfo = {
+              lucky_number: luckyNumber,
+              card_data: cartela.card_data
+            };
+            console.log(`🎯 Winning cartela #${luckyNumber} with ${winningCellsInfo.length} winning cells`);
+            break;
+          }
+        }
+      }
+      break;
+    }
+  }
+  
+  
+  // Calculate prize
   const prizePoolNum = parseFloat(this.currentGame.prize_pool) || 0;
   const totalPrize = (prizePoolNum * 81) / 100;
   const roundedPrize = Math.round(totalPrize * 100) / 100;
   
+  // Credit winner in database
   const user = await User.findByPk(winnerId);
   const winnerName = user?.username || user?.phone_number || `Player ${winnerId}`;
   
   if (user) {
-    console.log(`Before update - Wallet: ${user.wallet_balance}, Withdrawable: ${user.withdrawable_balance}`);
-    
-    // Update both balances
     user.wallet_balance = parseFloat(user.wallet_balance) + roundedPrize;
-    user.withdrawable_balance = (parseFloat(user.withdrawable_balance) || 0) + roundedPrize;
-    user.total_won = (user.total_won || 0) + 1;
-    
+    user.total_won += 1;
     await user.save();
-    
-    console.log(`After update - Wallet: ${user.wallet_balance}, Withdrawable: ${user.withdrawable_balance}`);
-    console.log(`✅ Added ${roundedPrize} to withdrawable_balance`);
-    
-    await Transaction.create({
-      user_id: winnerId,
-      type: 'prize',
-      amount: roundedPrize,
-      balance_after: user.wallet_balance,
-      status: 'completed',
-      description: `Won ${roundedPrize} Birr from game #${this.currentGame.game_number}`
-    });
   }
   
+  // Mark game as completed
   this.currentGame.status = 'completed';
   this.currentGame.winner_ids = [winnerId];
   this.currentGame.winner_amount = roundedPrize;
   this.currentGame.end_time = new Date();
   await this.currentGame.save();
   
-  this.io.emit('game-ended', {
-    winners: [{ userId: winnerId, username: winnerName, amount: roundedPrize }],
+  // Announce winner
+   this.io.emit('game-ended', {
+    winners: [{ 
+      userId: winnerId, 
+      username: winnerName, 
+      amount: roundedPrize,
+      cartela: winningCartelaInfo,
+      winningCells: winningCellsInfo
+    }],
     prizeAmount: roundedPrize,
     message: `🎉 BINGO! ${winnerName} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
   });
   
+  // Clear all player memory
+  this.players.clear();
+  
+  // Start new game
   setTimeout(() => {
     this.startNewGame();
-  }, 5000);
+  }, 9000);
 }
 // Helper method to find winning pattern
 findWinningPatternCells(cartelaData, markedNumbers) {

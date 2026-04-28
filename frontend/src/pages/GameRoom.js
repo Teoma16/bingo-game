@@ -18,7 +18,7 @@ const GameRoom = ({ user }) => {
   const [prizePool, setPrizePool] = useState(location.state?.prizePool || 0);
   const [winnerAmount, setWinnerAmount] = useState(location.state?.winnerAmount || 0);
   const [gameActive, setGameActive] = useState(true);
-  //const [selectedCartelas, setSelectedCartelas] = useState([]);
+  const [selectedCartelas, setSelectedCartelas] = useState([]);
   const [markedNumbers, setMarkedNumbers] = useState([]);
   const [autoMark, setAutoMark] = useState(true);
   const [callCount, setCallCount] = useState(0);
@@ -31,22 +31,8 @@ const GameRoom = ({ user }) => {
 const [winningCells, setWinningCells] = useState([]);
 
   const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
- // Check if user is spectator
-  const isSpectator = location.state?.isSpectator || false;
+
   // Load cartelas from location state or localStorage
-  
-    // For spectators, we don't need cartelas
-  const [selectedCartelas, setSelectedCartelas] = useState(
-    isSpectator ? [] : (location.state?.selectedCartelas || [])
-  );
-  
-  useEffect(() => {
-  console.log('=== DEBUG GAMEROOM ===');
-  console.log('isSpectator:', isSpectator);
-  console.log('location.state:', location.state);
-  console.log('selectedCartelas from state:', selectedCartelas);
-}, []);
-  
   useEffect(() => {
     console.log('=== GAMEROOM LOADING CARTELAS ===');
     console.log('Location state:', location.state);
@@ -73,15 +59,7 @@ const [winningCells, setWinningCells] = useState([]);
     }
   }, [location.state, user]);
 
-  
-  
   const fetchUserCartelas = async () => {
-	   const token = localStorage.getItem('token');
-  console.log('Token exists?', !!token);
-  if (!token) {
-    console.log('No token found - user may need to login');
-    return;
-  }
     try {
       const response = await axios.get(`${API_URL}/api/game/user-cartelas/${user.id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -185,18 +163,7 @@ const [winningCells, setWinningCells] = useState([]);
 	  
 	  
       setGameActive(false);
-	    // Reset prize pool for next game
-  setPrizePool(0);      // ← ADD THIS
-  setWinnerAmount(0);   // ← ADD THIS
-	  
-	    // Redirect spectators to home after game ends
-  if (isSpectator) {
-    setTimeout(() => {
-      navigate('/');
-    }, 5000);
-  } else {
       localStorage.removeItem('userCartelas');
-  }
     });
     
     newSocket.on('invalid-bingo', (data) => {
@@ -456,9 +423,6 @@ const renderWinningCartela = (cardData, winningCells) => {
       </div>
       
       <div className="game-content">
-	{/* Only show cartelas and BINGO button for players (not spectators) */}
-{!isSpectator && (
-  <>  
         <div className="cartelas-section">
           <h3>Your Cartelas ({selectedCartelas.length}/2)</h3>
           <div className="cartelas-container">
@@ -475,21 +439,11 @@ const renderWinningCartela = (cardData, winningCells) => {
             )}
           </div>
         </div>
-        </>
-)}  
-
-{/* Spectator badge */}
-{isSpectator && (
-  <div className="spectator-badge">
-    👁️ Watching Live Game - You'll be able to play in the next game!
-  </div>
-)}		
-		
+        
         <div className="called-numbers-section">
           {renderRecentCalls()}
           {renderBingoBoard()}
         </div>
-		
       </div>
       
       <div className="game-footer">

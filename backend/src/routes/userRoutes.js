@@ -10,10 +10,7 @@ router.get('/balance/:userId', authenticate, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json({ 
-      totalBalance: user.wallet_balance,
-      withdrawableBalance: user.withdrawable_balance 
-    });
+    res.json({ balance: user.wallet_balance });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -73,15 +70,10 @@ router.post('/withdraw', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Minimum withdrawal amount is 100 Birr' });
     }
     
-    // if (parseFloat(user.wallet_balance) < amount) {
-    //   return res.status(400).json({ error: 'Insufficient balance' });
-    // }
-    // CHANGE THIS: Check withdrawable_balance instead of wallet_balance
-    if (user.withdrawable_balance < amount) {
-      return res.status(400).json({ 
-        error: `Insufficient withdrawable balance. Available: ${user.withdrawable_balance} Birr. Only winnings can be withdrawn.` 
-      });
+    if (parseFloat(user.wallet_balance) < amount) {
+      return res.status(400).json({ error: 'Insufficient balance' });
     }
+    
     const withdrawRequest = await WithdrawRequest.create({
       user_id: userId,
       amount: amount,

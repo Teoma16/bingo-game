@@ -20,7 +20,7 @@ const Home = ({ user, setUser }) => {
   const [adData, setAdData] = useState(null);
   const [showFooter, setShowFooter] = useState(false);
   const [takenNumbers, setTakenNumbers] = useState([]);
-const [withdrawableBalance, setWithdrawableBalance] = useState(0);
+
 // Add this state with your other states
 const [isGameActive, setIsGameActive] = useState(false);
 const [waitingMessage, setWaitingMessage] = useState('');
@@ -37,8 +37,6 @@ const [depositAmount, setDepositAmount] = useState(null);
 const [depositSms, setDepositSms] = useState('');
 const [depositStatus, setDepositStatus] = useState('');
   // Fetch cartela data
-
-  
   const fetchCartela = async (luckyNumber) => {
     try {
       const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/cartela/${luckyNumber}`);
@@ -56,33 +54,8 @@ const fetchTransactions = async () => {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     setTransactions(response.data);
-// ALSO fetch balance info (new)
-    const balanceResponse = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/balance/${user.id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    setBalance(balanceResponse.data.totalBalance);
-    setWithdrawableBalance(balanceResponse.data.withdrawableBalance);
-
   } catch (error) {
     console.error('Failed to fetch transactions:', error);
-  }
-};
-const fetchBalances = async () => {
-   const token = localStorage.getItem('token');
-  if (!token) {
-    console.log('No token found, skipping balance fetch');
-    return;
-  }
-  
-  try {
-    const response = await axios.get(`https://bingo-game-production-dd0b.up.railway.app/api/user/balance/${user.id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    console.log('Balance response:', response.data);
-    setBalance(response.data.totalBalance);
-    setWithdrawableBalance(response.data.withdrawableBalance || 0);
-  } catch (error) {
-    console.error('Failed to fetch balances:', error);
   }
 };
 const fetchGameHistory = async () => {
@@ -211,11 +184,7 @@ const handleWithdraw = async () => {
       });
     }
     setSelectedNumbers(prev => prev.filter(n => n !== number));
-    setSelectedCartelas(prev => {
-      const newCartelas = prev.filter(c => c.lucky_number !== number);
-      localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
-      return newCartelas;
-    });
+    setSelectedCartelas(prev => prev.filter(c => c.lucky_number !== number));
     toast(`Cartela ${number} deselected`);
   } else {
     // SELECT - This is a new number
@@ -244,34 +213,16 @@ const handleWithdraw = async () => {
         });
       }
       setSelectedNumbers(prev => [...prev, number]);
-      
-      const newCartela = {
+      setSelectedCartelas(prev => [...prev, {
         lucky_number: number,
         card_data: cartelaData.card_data
-      };
-      
-      setSelectedCartelas(prev => {
-        const newCartelas = [...prev, newCartela];
-        localStorage.setItem('userCartelas', JSON.stringify(newCartelas));
-        return newCartelas;
-      });
-      // toast.success(`Cartela ${number} selected!`);
+      }]);
+    // toast.success(`Cartela ${number} selected!`);
     }
   }
 };
 
   useEffect(() => {
-	  
-	   // Check if user is logged in
-  const token = localStorage.getItem('token');
-  const savedUser = localStorage.getItem('user');
-  
-  if (!token || !savedUser) {
-    // Redirect to login if not logged in
-    navigate('/login');
-    return;
-  }
-     fetchBalances();
     // Fetch advertisement
     fetchAdvertisement();
     
@@ -301,43 +252,23 @@ newSocket.on('registered', (data) => {
   console.log('Registered:', data);
   setBalance(data.user.wallet_balance);
   
-  // Check if game is already ACTIVE
+  // NEW: Check current game status
   if (data.gameStatus === 'active') {
-    console.log('Game is already active - redirecting to watch as spectator');
-    
-    // Redirect to GameRoom as spectator immediately
-    navigate(`/game/${user.id}`, { 
-      state: { 
-        gameId: data.gameId,
-        gameNumber: data.gameNumber,
-        prizePool: data.prizePool,
-        winnerAmount: data.winnerAmount || 0,
-        isSpectator: true,
-        selectedCartelas: [] 
-      } 
-    });
-    return;
-  }
-  
-  // If game is WAITING (not active), show waiting UI
-  console.log('Game is waiting - showing selection UI');
-  setIsGameActive(false);
-  setWaitingMessage('');
-  
- if (data.totalPlayers === 0 && data.totalCartelas === 0) {
-    console.log('Brand new game - resetting selections');
-    setTakenNumbers([]);
-    setSelectedNumbers([]);
-    setSelectedCartelas([]);
-    localStorage.removeItem('userCartelas');
-  } else {
-    // Keep existing selections, just update taken numbers
-    console.log('Preserving existing selections');
-    if (data.takenNumbers) {
+    setIsGameActive(true);
+    setWaitingMessage('🎮 A game is currently in progress. Please wait for the next game...');
+	if (data.takenNumbers) {
       setTakenNumbers(data.takenNumbers);
     }
-  }
+  } else {
+    setIsGameActive(false);
+    setWaitingMessage('');
+	  setTakenNumbers([]);
+    setSelectedNumbers([]);
+    setSelectedCartelas([]);
+  } 
   
+  // Set initial taken numbers from server
+ 
   if (data.prizePool) {
     setWinnerAmount(data.winnerAmount || 0);
   }
@@ -366,33 +297,26 @@ newSocket.on('game-state', (data) => {
       toast.success(data.message);
 	  
 	    // NEW CODE: Ensure lucky numbers are shown during waiting period
-		 // setTakenNumbers([]);
-  //setSelectedNumbers([]);
-  //setSelectedCartelas([]);
-  setWinnerAmount(0);  // ← ADD THIS
+		  setTakenNumbers([]);
+  setSelectedNumbers([]);
+  setSelectedCartelas([]);
   setIsGameActive(false);
   setWaitingMessage('');
     // Also clear localStorage for new game
- // localStorage.removeItem('userCartelas');
+  localStorage.removeItem('userCartelas');
     });
   // Listen for game-ended event (when a game ends) - ADD THIS
 newSocket.on('game-ended', (data) => {
   console.log('Game ended - showing lucky numbers');
-  setTakenNumbers([]);
+setTakenNumbers([]);
   setSelectedNumbers([]);
   setSelectedCartelas([]); 
-  setIsGameActive(false);
+ setIsGameActive(false);
   setWaitingMessage('');
-  setWinnerAmount(0);  // Reset winner amount to 0
-  localStorage.removeItem('userCartelas');
-    // Request fresh game state
-  newSocket.emit('get-game-state');
+   setWinnerAmount(0);  // Reset winner amount to 0
+    localStorage.removeItem('userCartelas');
   toast.success('Game ended! You can now select lucky numbers for the next game.');
-   fetchBalances();
 });  
-
-
-
   newSocket.on('game-update', (data) => {
   setTotalPlayers(data.totalPlayers);
  // const winnerAmt = (data.prizePool || 0) * 0.81;
@@ -422,7 +346,7 @@ newSocket.on('game-ended', (data) => {
     });
     
   // In your game-started event listener
-/*
+
 newSocket.on('game-started', (data) => {
   console.log('Game started! Prize pool:', data.prizePool);
   console.log('Selected cartelas before navigate:', selectedCartelas);
@@ -449,66 +373,7 @@ newSocket.on('game-started', (data) => {
     } 
   });
 });
- */ 
-newSocket.on('game-started', (data) => {
-  console.log('Game started! Prize pool:', data.prizePool);
-  
-  // IMPORTANT: Read from localStorage instead of state
-  const savedCartelas = localStorage.getItem('userCartelas');
-  let hasSelectedCartelas = false;
-  let cartelasToSend = [];
-  
-  if (savedCartelas) {
-    cartelasToSend = JSON.parse(savedCartelas);
-    hasSelectedCartelas = cartelasToSend.length > 0;
-    console.log('Found cartelas in localStorage:', cartelasToSend.length);
-  } else {
-    console.log('No cartelas found in localStorage');
-  }
-  
-  console.log('hasSelectedCartelas:', hasSelectedCartelas);
-  
-  if (hasSelectedCartelas) {
-    console.log('User is a PLAYER, joining the game');
-    setIsGameActive(true);
-    setWaitingMessage('🎮 Game started! You are playing...');
     
-    const winnerAmt = (data.prizePool || 0) * 0.81;
-    
-    navigate(`/game/${user.id}`, { 
-      state: { 
-        gameId: data.gameId,
-        gameNumber: data.gameNumber,
-        prizePool: data.prizePool,
-        winnerAmount: winnerAmt,
-        isSpectator: false,
-        selectedCartelas: cartelasToSend 
-      } 
-    });
-  } else {
-    console.log('User is a SPECTATOR, watching live game');
-    setIsGameActive(true);
-    setWaitingMessage('🎮 Watching live game...');
-    
-    const winnerAmt = (data.prizePool || 0) * 0.81;
-    
-    navigate(`/game/${user.id}`, { 
-      state: { 
-        gameId: data.gameId,
-        gameNumber: data.gameNumber,
-        prizePool: data.prizePool,
-        winnerAmount: winnerAmt,
-        isSpectator: true,
-        selectedCartelas: [] 
-      } 
-    });
-  }
-  
-  toast.success(data.message);
-});
-
-
-  
     return () => {
       if (newSocket) newSocket.disconnect();
     };
@@ -602,11 +467,7 @@ newSocket.on('game-started', (data) => {
       <div className="header">
         <div className="user-info">
           <h3>👤 {user?.username || user?.phone_number}</h3>
-          <div className="balance-info">
-      <p>💰 Total Balance: {balance} Birr</p>
-      <p>🏆 Winnings (Withdrawable): {withdrawableBalance} Birr</p>
-      <p>📥 Deposits & Bonus: {balance - withdrawableBalance} Birr</p>
-    </div>
+          <p>💰 Balance: {balance} Birr</p>
         </div>
         <div className="game-info">
           <div className="winner-prize">🏆 ደራሽ : {Math.max(0, winnerAmount).toFixed(2)} Birr</div>
@@ -717,11 +578,6 @@ newSocket.on('game-started', (data) => {
         <div className="current-balance">
           <h3>Current Balance</h3>
           <p className="balance-amount">{balance} Birr</p>
-          <div className="balance-breakdown">
-    <p>🏆 Withdrawable (Winnings): {withdrawableBalance} Birr</p>
-    <p>📥 Deposits & Bonus: {balance - withdrawableBalance} Birr</p>
-  </div>
-  <p className="note">⚠️ Only winnings can be withdrawn</p>
         </div>
         
         {/* Recent Winnings Section */}

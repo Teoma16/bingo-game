@@ -794,14 +794,3 @@
   background: #00ff00;
   color: #000;
 }
-
-.spectator-badge {
-  background: linear-gradient(135deg, #6a1b9a, #8e24aa);
-  color: white;
-  text-align: center;
-  padding: 10px;
-  margin: 10px 20px;
-  border-radius: 10px;
-  font-weight: bold;
-  animation: pulse 2s infinite;
-}
