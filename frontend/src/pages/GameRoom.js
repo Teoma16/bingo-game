@@ -19,7 +19,7 @@ const GameRoom = ({ user }) => {
   const [winnerAmount, setWinnerAmount] = useState(location.state?.winnerAmount || 0);
   const [gameActive, setGameActive] = useState(true);
   //const [selectedCartelas, setSelectedCartelas] = useState([]);
-  const [markedNumbers, setMarkedNumbers] = useState([]);
+ // const [markedNumbers, setMarkedNumbers] = useState([]);
   const [autoMark, setAutoMark] = useState(true);
   const [callCount, setCallCount] = useState(0);
   const [gameNumber, setGameNumber] = useState(location.state?.gameNumber || 0);
@@ -29,6 +29,11 @@ const GameRoom = ({ user }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [winningCartelaData, setWinningCartelaData] = useState(null);
 const [winningCells, setWinningCells] = useState([]);
+const savedMarkedNumbers = location.state?.markedNumbers || [];
+
+// Initialize marked numbers with saved ones if rejoining
+  const [markedNumbers, setMarkedNumbers] = useState(savedMarkedNumbers);
+
 
   const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
  // Check if user is spectator
@@ -117,6 +122,19 @@ useEffect(() => {
       });
     }
     
+ // If rejoining, sync marked numbers with backend
+  if (isRejoining && savedMarkedNumbers.length > 0) {
+    console.log('🔄 Syncing rejoined marked numbers:', savedMarkedNumbers.length);
+    // Send each marked number to backend
+    savedMarkedNumbers.forEach(number => {
+      newSocket.emit('auto-mark', {
+        userId: user.id,
+        number: number
+      });
+    });
+  }
+
+
     newSocket.on('game-started', (data) => {
       console.log('Game started event received:', data);
       setCurrentGameId(data.gameId);

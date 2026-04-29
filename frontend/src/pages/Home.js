@@ -402,6 +402,7 @@ setTakenNumbers([]);
       winnerAmount: data.winnerAmount,
       isSpectator: false,
       selectedCartelas: data.selectedCartelas,
+      markedNumbers: data.markedNumbers,  // ← Pass marked numbers
       rejoining: true
     } 
   });
@@ -622,8 +623,8 @@ newSocket.on('game-started', (data) => {
                 disabled={isNumberDisabled(number)}
               >
                 {number}
-			{selectedNumbers.includes(number)}{/* && ' ✓'}*/}
-{takenNumbers.includes(number) && !selectedNumbers.includes(number)}{/* && ' 🔒'}*/}
+			{selectedNumbers.includes(number) && ' ✓'}
+{takenNumbers.includes(number) && !selectedNumbers.includes(number) && ' 🔒'}
               </button>
             ))}
           </div>

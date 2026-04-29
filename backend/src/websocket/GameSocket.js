@@ -156,12 +156,14 @@ socket.on('test-mark', async (data) => {
           }
         }
       }
-      
+       // Get marked numbers from database
+  const markedNumbers = gamePlayer?.marked_numbers || [];
+  console.log(`Player ${user.id} has ${markedNumbers.length} marked numbers to restore`);
       // Restore player in memory
       this.players.set(socket.id, {
         userId: user.id,
         cartelaIds: gamePlayer?.cartela_ids || [],
-        markedNumbers: gamePlayer?.marked_numbers || [],
+        markedNumbers: marked_numbers,
         socketId: socket.id
       });
       
@@ -172,6 +174,7 @@ socket.on('test-mark', async (data) => {
         prizePool: activeGame.prize_pool,
         winnerAmount: activeGame.prize_pool * 0.81,
         selectedCartelas: cartelas,
+        markedNumbers: markedNumbers,  // ← Send marked numbers to frontend
         calledNumbers: activeGame.called_numbers || []
       });
       return;
