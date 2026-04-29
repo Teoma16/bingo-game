@@ -126,7 +126,10 @@ socket.on('test-mark', async (data) => {
       }
       
  // Check if player has an active game
+ console.log(`🔍 Checking rejoin for user ${user.id}`);
+console.log(`   playerGames has: ${Array.from(this.playerGames.keys())}`);
     const activeGameId = this.playerGames.get(user.id);
+    console.log(`   activeGameId: ${activeGameId}`);
     let activeGame = null;
     
     if (activeGameId) {
@@ -371,7 +374,7 @@ async checkForWinnersManual(userId) {
     });
     // Store which game this player is in
 this.playerGames.set(userId, this.currentGame.id);
-
+console.log(`📝 Stored player ${userId} in game ${this.currentGame.id}`);
     console.log(`[PRIZE DEBUG] Prize pool before: ${currentPrizePool}, after: ${this.currentGame.prize_pool}`);
     console.log(`[PRIZE DEBUG] Winner amount (81%): ${this.currentGame.prize_pool * 0.81}`);
  
