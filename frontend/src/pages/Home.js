@@ -248,27 +248,47 @@ const handleWithdraw = async () => {
     
     // Socket event listeners
   // Update the registered event handler to receive taken numbers
-newSocket.on('registered', (data) => {
+
   console.log('Registered:', data);
   setBalance(data.user.wallet_balance);
   
-  // NEW: Check current game status
+  // Check if game is already ACTIVE
   if (data.gameStatus === 'active') {
-    setIsGameActive(true);
-    setWaitingMessage('🎮 A game is currently in progress. Please wait for the next game...');
-	if (data.takenNumbers) {
-      setTakenNumbers(data.takenNumbers);
-    }
-  } else {
-    setIsGameActive(false);
-    setWaitingMessage('');
-	  setTakenNumbers([]);
+    console.log('Game is already active - redirecting to watch as spectator');
+    
+    // Redirect to GameRoom as spectator immediately
+    navigate(`/game/${user.id}`, { 
+      state: { 
+        gameId: data.gameId,
+        gameNumber: data.gameNumber,
+        prizePool: data.prizePool,
+        winnerAmount: data.winnerAmount || 0,
+        isSpectator: true,
+        selectedCartelas: [] 
+      } 
+    });
+    return;
+  }
+  
+  // If game is WAITING (not active), show waiting UI
+  console.log('Game is waiting - showing selection UI');
+  setIsGameActive(false);
+  setWaitingMessage('');
+  
+ if (data.totalPlayers === 0 && data.totalCartelas === 0) {
+    console.log('Brand new game - resetting selections');
+    setTakenNumbers([]);
     setSelectedNumbers([]);
     setSelectedCartelas([]);
-  } 
+    localStorage.removeItem('userCartelas');
+  } else {
+    // Keep existing selections, just update taken numbers
+    console.log('Preserving existing selections');
+    if (data.takenNumbers) {
+      setTakenNumbers(data.takenNumbers);
+    }
+  }
   
-  // Set initial taken numbers from server
- 
   if (data.prizePool) {
     setWinnerAmount(data.winnerAmount || 0);
   }
@@ -346,7 +366,7 @@ setTakenNumbers([]);
     });
     
   // In your game-started event listener
-
+/*
 newSocket.on('game-started', (data) => {
   console.log('Game started! Prize pool:', data.prizePool);
   console.log('Selected cartelas before navigate:', selectedCartelas);
@@ -372,8 +392,63 @@ newSocket.on('game-started', (data) => {
       selectedCartelas: selectedCartelas 
     } 
   });
-});
+});*/
+ newSocket.on('game-started', (data) => {
+  console.log('Game started! Prize pool:', data.prizePool);
+  
+  // IMPORTANT: Read from localStorage instead of state
+  const savedCartelas = localStorage.getItem('userCartelas');
+  let hasSelectedCartelas = false;
+  let cartelasToSend = [];
+  
+  if (savedCartelas) {
+    cartelasToSend = JSON.parse(savedCartelas);
+    hasSelectedCartelas = cartelasToSend.length > 0;
+    console.log('Found cartelas in localStorage:', cartelasToSend.length);
+  } else {
+    console.log('No cartelas found in localStorage');
+  }
+  
+  console.log('hasSelectedCartelas:', hasSelectedCartelas);
+  
+  if (hasSelectedCartelas) {
+    console.log('User is a PLAYER, joining the game');
+    setIsGameActive(true);
+    setWaitingMessage('🎮 Game started! You are playing...');
     
+    const winnerAmt = (data.prizePool || 0) * 0.81;
+    
+    navigate(`/game/${user.id}`, { 
+      state: { 
+        gameId: data.gameId,
+        gameNumber: data.gameNumber,
+        prizePool: data.prizePool,
+        winnerAmount: winnerAmt,
+        isSpectator: false,
+        selectedCartelas: cartelasToSend 
+      } 
+    });
+  } else {
+    console.log('User is a SPECTATOR, watching live game');
+    setIsGameActive(true);
+    setWaitingMessage('🎮 Watching live game...');
+    
+    const winnerAmt = (data.prizePool || 0) * 0.81;
+    
+    navigate(`/game/${user.id}`, { 
+      state: { 
+        gameId: data.gameId,
+        gameNumber: data.gameNumber,
+        prizePool: data.prizePool,
+        winnerAmount: winnerAmt,
+        isSpectator: true,
+        selectedCartelas: [] 
+      } 
+    });
+  }
+  
+  toast.success(data.message);
+});   
     return () => {
       if (newSocket) newSocket.disconnect();
     };

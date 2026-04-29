@@ -18,7 +18,7 @@ const GameRoom = ({ user }) => {
   const [prizePool, setPrizePool] = useState(location.state?.prizePool || 0);
   const [winnerAmount, setWinnerAmount] = useState(location.state?.winnerAmount || 0);
   const [gameActive, setGameActive] = useState(true);
-  const [selectedCartelas, setSelectedCartelas] = useState([]);
+  //const [selectedCartelas, setSelectedCartelas] = useState([]);
   const [markedNumbers, setMarkedNumbers] = useState([]);
   const [autoMark, setAutoMark] = useState(true);
   const [callCount, setCallCount] = useState(0);
@@ -31,7 +31,14 @@ const GameRoom = ({ user }) => {
 const [winningCells, setWinningCells] = useState([]);
 
   const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
-
+ // Check if user is spectator
+  const isSpectator = location.state?.isSpectator || false;
+  // Load cartelas from location state or localStorage
+  
+    // For spectators, we don't need cartelas
+  const [selectedCartelas, setSelectedCartelas] = useState(
+    isSpectator ? [] : (location.state?.selectedCartelas || [])
+  );
   // Load cartelas from location state or localStorage
   useEffect(() => {
     console.log('=== GAMEROOM LOADING CARTELAS ===');
@@ -163,7 +170,18 @@ const [winningCells, setWinningCells] = useState([]);
 	  
 	  
       setGameActive(false);
+        // Reset prize pool for next game
+  setPrizePool(0);      // ← ADD THIS
+  setWinnerAmount(0);   // ← ADD THIS
+	  
+	    // Redirect spectators to home after game ends
+  if (isSpectator) {
+    setTimeout(() => {
+      navigate('/');
+    }, 5000);
+  } else {
       localStorage.removeItem('userCartelas');
+  }
     });
     
     newSocket.on('invalid-bingo', (data) => {
@@ -423,6 +441,9 @@ const renderWinningCartela = (cardData, winningCells) => {
       </div>
       
       <div className="game-content">
+	{/* Only show cartelas and BINGO button for players (not spectators) */}
+{!isSpectator && (
+  <>  
         <div className="cartelas-section">
           <h3>Your Cartelas ({selectedCartelas.length}/2)</h3>
           <div className="cartelas-container">
@@ -439,7 +460,23 @@ const renderWinningCartela = (cardData, winningCells) => {
             )}
           </div>
         </div>
-        
+        </>
+)}   
+
+{/* BINGO button - only for players */}
+{/*
+{!isSpectator && (
+  <button className="bingo-button" onClick={handlePressBingo}>
+    🎲 BINGO!
+  </button>
+)}
+*/}
+{/* Spectator badge */}
+{isSpectator && (
+  <div className="spectator-badge">
+    👁️ Watching Live Game - You'll be able to play in the next game!
+  </div>
+)}	      
         <div className="called-numbers-section">
           {renderRecentCalls()}
           {renderBingoBoard()}
