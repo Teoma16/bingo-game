@@ -390,7 +390,7 @@ setTakenNumbers([]);
     newSocket.on('countdown-update', (data) => {
       setTimeRemaining(data.timeRemaining);
     });
- socket.on('rejoin-game', (data) => {
+ newSocket.on('rejoin-game', (data) => {
   console.log('🔄 Rejoining active game!', data);
   toast.info('Rejoining your active game...');
   

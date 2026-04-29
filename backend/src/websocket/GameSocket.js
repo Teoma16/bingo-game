@@ -1112,12 +1112,7 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
       break;
     }
   }
-  // Clear player tracking for this game
-for (const [userId, gameId] of this.playerGames) {
-  if (gameId === this.currentGame.id) {
-    this.playerGames.delete(userId);
-  }
-}
+
   
   // Calculate prize
   const prizePoolNum = parseFloat(this.currentGame.prize_pool) || 0;
@@ -1157,6 +1152,14 @@ for (const [userId, gameId] of this.playerGames) {
   // Clear all player memory
   this.players.clear();
   
+
+  // Clear player tracking for this game
+for (const [userId, gameId] of this.playerGames) {
+  if (gameId === this.currentGame.id) {
+    this.playerGames.delete(userId);
+  }
+}
+
   // Start new game
   setTimeout(() => {
     this.startNewGame();
