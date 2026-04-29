@@ -269,6 +269,7 @@ const handleWithdraw = async () => {
     
 
 newSocket.on('rejoin-game', (data) => {
+  alert('REJOIN TRIGGERED!');  // This will confirm if event is received
   console.log('🔄 REJOIN-GAME EVENT FIRED!');
   console.log('Data:', data);
   
