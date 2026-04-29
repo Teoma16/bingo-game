@@ -20,7 +20,7 @@ const Home = ({ user, setUser }) => {
   const [adData, setAdData] = useState(null);
   const [showFooter, setShowFooter] = useState(false);
   const [takenNumbers, setTakenNumbers] = useState([]);
-
+const [isRejoining, setIsRejoining] = useState(false);
 // Add this state with your other states
 const [isGameActive, setIsGameActive] = useState(false);
 const [waitingMessage, setWaitingMessage] = useState('');
@@ -267,11 +267,36 @@ const handleWithdraw = async () => {
       });
     }
     
+
+
+ newSocket.on('rejoin-game', (data) => {
+  console.log('🔄 Rejoining active game!', data);
+  setIsRejoining(true);  // Set flag
+  toast('Rejoining your active game...');
+  
+  navigate(`/game/${user.id}`, { 
+    state: { 
+      gameId: data.gameId,
+      gameNumber: data.gameNumber,
+      prizePool: data.prizePool,
+      winnerAmount: data.winnerAmount,
+      isSpectator: false,
+      selectedCartelas: data.selectedCartelas,
+      markedNumbers: data.markedNumbers,  // ← Pass marked numbers
+      rejoining: true
+    } 
+  });
+   console.log('Navigation called');
+}); 
     // Socket event listeners
   // Update the registered event handler to receive taken numbers
 
     // Update the registered event handler to receive taken numbers
 newSocket.on('registered', (data) => {
+   if (isRejoining) {
+    console.log('Skipping registered event - already rejoining');
+    return;
+  }
   console.log('Registered:', data);
   setBalance(data.user.wallet_balance);
   
@@ -390,23 +415,7 @@ setTakenNumbers([]);
     newSocket.on('countdown-update', (data) => {
       setTimeRemaining(data.timeRemaining);
     });
- newSocket.on('rejoin-game', (data) => {
-  console.log('🔄 Rejoining active game!', data);
-  toast('Rejoining your active game...');
   
-  navigate(`/game/${user.id}`, { 
-    state: { 
-      gameId: data.gameId,
-      gameNumber: data.gameNumber,
-      prizePool: data.prizePool,
-      winnerAmount: data.winnerAmount,
-      isSpectator: false,
-      selectedCartelas: data.selectedCartelas,
-      markedNumbers: data.markedNumbers,  // ← Pass marked numbers
-      rejoining: true
-    } 
-  });
-});   
   // In your game-started event listener
 /*
 newSocket.on('game-started', (data) => {
