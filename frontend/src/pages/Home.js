@@ -392,7 +392,7 @@ setTakenNumbers([]);
     });
  newSocket.on('rejoin-game', (data) => {
   console.log('🔄 Rejoining active game!', data);
-  toast.info('Rejoining your active game...');
+  toast('Rejoining your active game...');
   
   navigate(`/game/${user.id}`, { 
     state: { 
