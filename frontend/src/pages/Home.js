@@ -268,26 +268,26 @@ const handleWithdraw = async () => {
     }
     
 
-
- newSocket.on('rejoin-game', (data) => {
-  console.log('🔄 Rejoining active game!', data);
-  setIsRejoining(true);  // Set flag
-  toast('Rejoining your active game...');
+newSocket.on('rejoin-game', (data) => {
+  console.log('🔄 REJOIN-GAME EVENT FIRED!');
+  console.log('Data:', data);
   
-  navigate(`/game/${user.id}`, { 
-    state: { 
-      gameId: data.gameId,
-      gameNumber: data.gameNumber,
-      prizePool: data.prizePool,
-      winnerAmount: data.winnerAmount,
-      isSpectator: false,
-      selectedCartelas: data.selectedCartelas,
-      markedNumbers: data.markedNumbers,  // ← Pass marked numbers
-      rejoining: true
-    } 
-  });
-   console.log('Navigation called');
-}); 
+  // Use setTimeout to ensure navigation happens
+  setTimeout(() => {
+    navigate(`/game/${data.gameId}`, { 
+      state: { 
+        gameId: data.gameId,
+        gameNumber: data.gameNumber,
+        prizePool: data.prizePool,
+        winnerAmount: data.winnerAmount,
+        isSpectator: false,
+        selectedCartelas: data.selectedCartelas,
+        markedNumbers: data.markedNumbers || [],
+        rejoining: true
+      } 
+    });
+  }, 100);
+});
     // Socket event listeners
   // Update the registered event handler to receive taken numbers
 
