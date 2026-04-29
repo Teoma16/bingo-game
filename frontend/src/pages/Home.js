@@ -223,6 +223,15 @@ const handleWithdraw = async () => {
 };
 
   useEffect(() => {
+    	   // Check if user is logged in
+  const token = localStorage.getItem('token');
+  const savedUser = localStorage.getItem('user');
+  
+  if (!token || !savedUser) {
+    // Redirect to login if not logged in
+    navigate('/login');
+    return;
+  }
     // Fetch advertisement
     fetchAdvertisement();
     
@@ -249,6 +258,8 @@ const handleWithdraw = async () => {
     // Socket event listeners
   // Update the registered event handler to receive taken numbers
 
+    // Update the registered event handler to receive taken numbers
+newSocket.on('registered', (data) => {
   console.log('Registered:', data);
   setBalance(data.user.wallet_balance);
   
@@ -317,13 +328,14 @@ newSocket.on('game-state', (data) => {
       toast.success(data.message);
 	  
 	    // NEW CODE: Ensure lucky numbers are shown during waiting period
-		  setTakenNumbers([]);
-  setSelectedNumbers([]);
-  setSelectedCartelas([]);
+		 // setTakenNumbers([]);
+  //setSelectedNumbers([]);
+  //setSelectedCartelas([]);
+  setWinnerAmount(0);  // ← ADD THIS
   setIsGameActive(false);
   setWaitingMessage('');
     // Also clear localStorage for new game
-  localStorage.removeItem('userCartelas');
+  //localStorage.removeItem('userCartelas');
     });
   // Listen for game-ended event (when a game ends) - ADD THIS
 newSocket.on('game-ended', (data) => {
@@ -335,7 +347,9 @@ setTakenNumbers([]);
   setWaitingMessage('');
    setWinnerAmount(0);  // Reset winner amount to 0
     localStorage.removeItem('userCartelas');
+    newSocket.emit('get-game-state');
   toast.success('Game ended! You can now select lucky numbers for the next game.');
+  
 });  
   newSocket.on('game-update', (data) => {
   setTotalPlayers(data.totalPlayers);
@@ -392,7 +406,8 @@ newSocket.on('game-started', (data) => {
       selectedCartelas: selectedCartelas 
     } 
   });
-});*/
+});
+*/
  newSocket.on('game-started', (data) => {
   console.log('Game started! Prize pool:', data.prizePool);
   
