@@ -390,7 +390,22 @@ setTakenNumbers([]);
     newSocket.on('countdown-update', (data) => {
       setTimeRemaining(data.timeRemaining);
     });
-    
+ socket.on('rejoin-game', (data) => {
+  console.log('🔄 Rejoining active game!', data);
+  toast.info('Rejoining your active game...');
+  
+  navigate(`/game/${user.id}`, { 
+    state: { 
+      gameId: data.gameId,
+      gameNumber: data.gameNumber,
+      prizePool: data.prizePool,
+      winnerAmount: data.winnerAmount,
+      isSpectator: false,
+      selectedCartelas: data.selectedCartelas,
+      rejoining: true
+    } 
+  });
+});   
   // In your game-started event listener
 /*
 newSocket.on('game-started', (data) => {

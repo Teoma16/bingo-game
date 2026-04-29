@@ -39,6 +39,18 @@ const [winningCells, setWinningCells] = useState([]);
   const [selectedCartelas, setSelectedCartelas] = useState(
     isSpectator ? [] : (location.state?.selectedCartelas || [])
   );
+
+// In GameRoom.js, add a check for rejoining
+const isRejoining = location.state?.rejoining || false;
+
+useEffect(() => {
+  if (isRejoining && socket && currentGameId) {
+    // Request current game state to sync
+    socket.emit('get-game-state');
+  }
+}, [isRejoining, socket, currentGameId]);
+
+
   // Load cartelas from location state or localStorage
   useEffect(() => {
     console.log('=== GAMEROOM LOADING CARTELAS ===');
