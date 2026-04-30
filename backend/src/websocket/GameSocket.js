@@ -143,7 +143,10 @@ socket.on('test-mark', async (data) => {
       const gamePlayer = await GamePlayer.findOne({
         where: { game_id: activeGame.id, user_id: user.id }
       });
-      
+      console.log(`📝 Rejoin - Cartelas: ${gamePlayer?.cartela_ids?.length || 0}`);
+console.log(`📝 Rejoin - Marked numbers: ${gamePlayer?.marked_numbers?.length || 0}`);
+console.log(`📝 Rejoin - Marked numbers list:`, gamePlayer?.marked_numbers);
+
       const cartelas = [];
       if (gamePlayer && gamePlayer.cartela_ids) {
         for (const luckyNumber of gamePlayer.cartela_ids) {

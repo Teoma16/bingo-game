@@ -30,6 +30,7 @@ const GameRoom = ({ user }) => {
   const [winningCartelaData, setWinningCartelaData] = useState(null);
 const [winningCells, setWinningCells] = useState([]);
 const savedMarkedNumbers = location.state?.markedNumbers || [];
+console.log('🎯 Restoring marked numbers:', savedMarkedNumbers.length);
 
 // Initialize marked numbers with saved ones if rejoining
   const [markedNumbers, setMarkedNumbers] = useState(savedMarkedNumbers);
@@ -54,7 +55,23 @@ useEffect(() => {
     socket.emit('get-game-state');
   }
 }, [isRejoining, socket, currentGameId]);
-
+useEffect(() => {
+  // If rejoining and we have saved marked numbers, update the UI
+  if (isRejoining && savedMarkedNumbers.length > 0) {
+    console.log('🔄 Restoring marked numbers to UI:', savedMarkedNumbers.length);
+    setMarkedNumbers(savedMarkedNumbers);
+    
+    // Also send to backend to sync
+    if (socket && socket.connected) {
+      savedMarkedNumbers.forEach(number => {
+        socket.emit('auto-mark', {
+          userId: user.id,
+          number: number
+        });
+      });
+    }
+  }
+}, [isRejoining, savedMarkedNumbers, socket, user.id]);
 
   // Load cartelas from location state or localStorage
   useEffect(() => {
@@ -174,7 +191,6 @@ useEffect(() => {
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 9000);
       }
-      
       if (data.winners && data.winners.length > 0) {
         const winnerData = data.winners[0];
         setWinner({
