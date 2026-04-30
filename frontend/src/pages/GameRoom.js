@@ -35,7 +35,7 @@ const savedMarkedNumbers = location.state?.markedNumbers || [];
   const [markedNumbers, setMarkedNumbers] = useState(savedMarkedNumbers);
 
 
-  const API_URL = 'https://bingo-game-production-dd0b.up.railway.app';
+  const API_URL = 'http://bingo-game-production-dd0b.up.railway.app';
  // Check if user is spectator
   const isSpectator = location.state?.isSpectator || false;
   // Load cartelas from location state or localStorage
@@ -109,7 +109,7 @@ useEffect(() => {
 
   useEffect(() => {
    // const newSocket = io(API_URL);
-   const newSocket = io('https://bingo-game-production-dd0b.up.railway.app', {
+   const newSocket = io('http://bingo-game-production-dd0b.up.railway.app', {
   transports: ['websocket', 'polling']
   //withCredentials: false
 });
