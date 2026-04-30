@@ -634,8 +634,8 @@ async handleAutoMark(socket, { userId, number }) {
   for (const [socketId, player] of this.players) {
     if (player.cartelaIds.length > 0) {
       // ✅ STORE PLAYER IN ACTIVE GAME TRACKING
-      this.playerGames.set(player.userId, this.currentGame.id);
-      console.log(`📝 Stored player ${player.userId} in active game ${this.currentGame.id}`);
+      // this.playerGames.set(player.userId, this.currentGame.id);
+      // console.log(`📝 Stored player ${player.userId} in active game ${this.currentGame.id}`);
       
       const user = await User.findByPk(player.userId);
       if (user && user.wallet_balance >= player.cartelaIds.length * 10) {
