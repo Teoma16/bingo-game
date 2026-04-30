@@ -138,6 +138,24 @@ console.log(`   playerGames has: ${Array.from(this.playerGames.keys())}`);
       });
     }
     
+ if (!activeGame) {
+      const activeGamePlayer = await GamePlayer.findOne({
+        where: { user_id: userId },
+        include: [{
+          model: Game,
+          where: { status: 'active' },
+          required: true
+        }]
+      });
+      
+      if (activeGamePlayer) {
+        activeGame = activeGamePlayer.Game;
+        console.log(`   Found active game via database: ${activeGame.id}`);
+        // Store in map for future
+        this.playerGames.set(userId, activeGame.id);
+      }
+    }
+
     // If player has an active game, send them back to it
     if (activeGame) {
       console.log(`Player ${user.id} has an active game ${activeGame.id} - rejoining`);
@@ -146,7 +164,12 @@ console.log(`   playerGames has: ${Array.from(this.playerGames.keys())}`);
       const gamePlayer = await GamePlayer.findOne({
         where: { game_id: activeGame.id, user_id: user.id }
       });
-      
+       console.log(`   GamePlayer found: ${!!gamePlayer}`);
+      console.log(`   Cartela IDs: ${gamePlayer?.cartela_ids}`);
+      console.log(`   Marked numbers: ${gamePlayer?.marked_numbers?.length}`);
+
+
+
       const cartelas = [];
       if (gamePlayer && gamePlayer.cartela_ids) {
         for (const luckyNumber of gamePlayer.cartela_ids) {
@@ -596,59 +619,63 @@ async handleAutoMark(socket, { userId, number }) {
   }
 
   async startGame() {
-	   console.log(`🎮 GAME STARTED - Game ID: ${this.currentGame.id}`);
-    this.currentGame = await Game.findByPk(this.currentGame.id);
-    
-    const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
-    console.log(`Starting game with prize pool: ${currentPrizePool}`);
-    
-    const playerCount = this.getUniquePlayerCount();
-    if (playerCount < 2) {
-      this.startWaitingPeriod();
-      return;
-    }
-    
-    for (const [socketId, player] of this.players) {
-      if (player.cartelaIds.length > 0) {
-        const user = await User.findByPk(player.userId);
-        if (user && user.wallet_balance >= player.cartelaIds.length * 10) {
-          const totalAmount = player.cartelaIds.length * 10;
-          const oldBalance = parseFloat(user.wallet_balance) || 0;
-          const newBalance = oldBalance - totalAmount;
-          
-          user.wallet_balance = newBalance;
-          await user.save();
-          
-          await Transaction.create({
-            user_id: player.userId,
-            type: 'game_fee',
-            amount: -totalAmount,
-            balance_after: newBalance,
-            status: 'completed',
-            description: `Game entry fee for ${player.cartelaIds.length} cartela(s)`
-          });
-        }
+  console.log(`🎮 GAME STARTED - Game ID: ${this.currentGame.id}`);
+  this.currentGame = await Game.findByPk(this.currentGame.id);
+  
+  const currentPrizePool = parseFloat(this.currentGame.prize_pool) || 0;
+  console.log(`Starting game with prize pool: ${currentPrizePool}`);
+  
+  const playerCount = this.getUniquePlayerCount();
+  if (playerCount < 2) {
+    this.startWaitingPeriod();
+    return;
+  }
+  
+  for (const [socketId, player] of this.players) {
+    if (player.cartelaIds.length > 0) {
+      // ✅ STORE PLAYER IN ACTIVE GAME TRACKING
+      this.playerGames.set(player.userId, this.currentGame.id);
+      console.log(`📝 Stored player ${player.userId} in active game ${this.currentGame.id}`);
+      
+      const user = await User.findByPk(player.userId);
+      if (user && user.wallet_balance >= player.cartelaIds.length * 10) {
+        const totalAmount = player.cartelaIds.length * 10;
+        const oldBalance = parseFloat(user.wallet_balance) || 0;
+        const newBalance = oldBalance - totalAmount;
+        
+        user.wallet_balance = newBalance;
+        await user.save();
+        
+        await Transaction.create({
+          user_id: player.userId,
+          type: 'game_fee',
+          amount: -totalAmount,
+          balance_after: newBalance,
+          status: 'completed',
+          description: `Game entry fee for ${player.cartelaIds.length} cartela(s)`
+        });
       }
     }
-    
-    this.currentGame.status = 'active';
-    this.currentGame.start_time = new Date();
-    this.currentGame.total_players = this.getUniquePlayerCount();
-    this.currentGame.commission = currentPrizePool * 0.19;
-    await this.currentGame.save();
-    
-    const winnerAmount = Math.round((currentPrizePool * 0.81) * 100) / 100;
-    
-    this.io.emit('game-started', {
-      gameId: this.currentGame.id,
-      gameNumber: this.currentGame.game_number,
-      prizePool: currentPrizePool,
-      winnerAmount: winnerAmount,
-      message: 'Game Started!'
-    });
-    
-    this.callNumbers();
   }
+  
+  this.currentGame.status = 'active';
+  this.currentGame.start_time = new Date();
+  this.currentGame.total_players = this.getUniquePlayerCount();
+  this.currentGame.commission = currentPrizePool * 0.19;
+  await this.currentGame.save();
+  
+  const winnerAmount = Math.round((currentPrizePool * 0.81) * 100) / 100;
+  
+  this.io.emit('game-started', {
+    gameId: this.currentGame.id,
+    gameNumber: this.currentGame.game_number,
+    prizePool: currentPrizePool,
+    winnerAmount: winnerAmount,
+    message: 'Game Started!'
+  });
+  
+  this.callNumbers();
+}
 
   callNumbers() {
   const allNumbers = [];
