@@ -125,6 +125,63 @@ socket.on('test-mark', async (data) => {
         return;
       }
       
+ // Check if player has an active game
+    const activeGameId = this.playerGames.get(user.id);
+    let activeGame = null;
+    
+    if (activeGameId) {
+      activeGame = await Game.findOne({ 
+        where: { id: activeGameId, status: 'active' }
+      });
+    }
+    
+    // If player has an active game, send them back to it
+    if (activeGame) {
+      console.log(`Player ${user.id} has an active game ${activeGame.id} - rejoining`);
+      
+      // Get player's cartelas for this game
+      const gamePlayer = await GamePlayer.findOne({
+        where: { game_id: activeGame.id, user_id: user.id }
+      });
+      
+      const cartelas = [];
+      if (gamePlayer && gamePlayer.cartela_ids) {
+        for (const luckyNumber of gamePlayer.cartela_ids) {
+          const cartela = await Cartela.findOne({ where: { lucky_number: luckyNumber } });
+          if (cartela) {
+            cartelas.push({
+              lucky_number: luckyNumber,
+              card_data: cartela.card_data
+            });
+          }
+        }
+      }
+      
+      // Restore player in memory
+      this.players.set(socket.id, {
+        userId: user.id,
+        cartelaIds: gamePlayer?.cartela_ids || [],
+        markedNumbers: gamePlayer?.marked_numbers || [],
+        socketId: socket.id
+      });
+      
+      // Send them back to their game
+      socket.emit('rejoin-game', {
+        gameId: activeGame.id,
+        gameNumber: activeGame.game_number,
+        prizePool: activeGame.prize_pool,
+        winnerAmount: activeGame.prize_pool * 0.81,
+        selectedCartelas: cartelas,
+        calledNumbers: activeGame.called_numbers || []
+      });
+      return;
+    }
+
+
+
+
+
+
       this.players.set(socket.id, {
         userId: user.id,
         cartelaIds: [],
@@ -1090,6 +1147,13 @@ checkAllWinPatterns(cartelaData, markedNumbers) {
     prizeAmount: roundedPrize,
     message: `🎉 BINGO! ${winnerName} wins ${roundedPrize.toFixed(2)} Birr! 🎉`
   });
+  
+  // Clear player tracking for this game
+for (const [userId, gameId] of this.playerGames) {
+  if (gameId === this.currentGame.id) {
+    this.playerGames.delete(userId);
+  }
+}
   
   // Clear all player memory
   this.players.clear();
