@@ -161,6 +161,7 @@ socket.on('test-mark', async (data) => {
       this.players.set(socket.id, {
         userId: user.id,
         cartelaIds: gamePlayer?.cartela_ids || [],
+        cartela_ids: gamePlayer?.cartela_ids || [],  // ← ADD THIS!
         markedNumbers: gamePlayer?.marked_numbers || [],
         socketId: socket.id
       });
@@ -172,6 +173,7 @@ socket.on('test-mark', async (data) => {
         prizePool: activeGame.prize_pool,
         winnerAmount: activeGame.prize_pool * 0.81,
         selectedCartelas: cartelas,
+          markedNumbers: gamePlayer?.marked_numbers || [],
         calledNumbers: activeGame.called_numbers || []
       });
       return;
@@ -206,7 +208,11 @@ socket.on('test-mark', async (data) => {
         takenNumbers: takenNumbers,
         prizePool: this.currentGame?.prize_pool || 0,
         winnerAmount: winnerAmount,
-		 gameStatus: this.currentGame?.status || 'waiting'  // Add this line
+		 gameStatus: this.currentGame?.status || 'waiting',  // Add this line
+     gameId: this.currentGame?.id || null,
+      gameNumber: this.currentGame?.game_number || 0,
+      totalPlayers: this.currentGame?.total_players || 0,
+      totalCartelas: this.currentGame?.total_cartelas || 0
       });
       // Broadcast to ALL players that a new player joined (optional)
     this.io.emit('player-joined', { 
